@@ -1,0 +1,20 @@
+Node Version: v22.2.0
+NPM Version: 10.8.0
+java 20.0.2 2023-07-18
+Java(TM) SE Runtime Environment (build 20.0.2+9-78)
+Java HotSpot(TM) 64-Bit Server VM (build 20.0.2+9-78, mixed mode, sharing)
+Yarn Version: 1.22.22
+Gradle Version: gradle-8.6-all
+
+
+
+Create or check the credentails
+eas credentails -p android
+
+
+Build project with EAS
+There are 3 option that we build:
+
+eas build -p android --profile preview
+eas build -p android --profile development
+eas build -p android --profile production

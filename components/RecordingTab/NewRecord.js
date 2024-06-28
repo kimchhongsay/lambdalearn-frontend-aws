@@ -130,7 +130,8 @@ const NewRecord = ({ visible, onClose }) => {
   const saveRecordedFile = async (sourceUri) => {
     const datetime = new Date().toISOString().replace(/[:.]/g, "-");
     const filename = generateFilename(selectedSubject, recordName, datetime);
-    const destinationUri = `${FileSystem.ExternalDirectoryPath}/${filename}`;
+    // const destinationUri = `${FileSystem.ExternalDirectoryPath}/${filename}`;
+    const destinationUri = `${FileSystem.documentDirectory}/${filename}`;
 
     try {
       await FileSystem.moveAsync({ from: sourceUri, to: destinationUri });

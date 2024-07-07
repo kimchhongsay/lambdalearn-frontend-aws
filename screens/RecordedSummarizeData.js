@@ -11,26 +11,27 @@ import {
 } from "react-native";
 import { Audio } from "expo-av";
 import axios from "axios";
-import OpenAI from "openai";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { OPENAI_API_KEY } from "@env";
+import { validatePathConfig } from "@react-navigation/native";
 
-const openai = new OpenAI({
-  apiKey: OPENAI_API_KEY,
-});
+const SERVER_URL = "https://e4ab-124-122-17-63.ngrok-free.app";
 
 const RecordedSummarizeData = ({ route, navigation }) => {
   const { subject, title, duration, datetime, filePath } = route.params;
-  const [sound, setSound] = useState(null);
-  const [playingAudio, setPlayingAudio] = useState(false);
-  const [error, setError] = useState(null);
-  const [transcript, setTranscript] = useState("");
-  const [editableTranscript, setEditableTranscript] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [state, setState] = useState({
+    sound: null,
+    playingAudio: false,
+    error: null,
+    transcript: "",
+    editableTranscript: "",
+    loading: false,
+    isEditingTranscript: false,
+    summarizedText: "",
+    editableSummarizedText: "",
+    isEditingSummarizedText: false,
+  });
 
   useEffect(() => {
-    console.log(OPENAI_API_KEY);
     const setupAudio = async () => {
       try {
         await Audio.setAudioModeAsync({
@@ -49,27 +50,26 @@ const RecordedSummarizeData = ({ route, navigation }) => {
           { uri: filePath },
           { shouldPlay: false }
         );
-        setSound(newSound);
+        setState((prevState) => ({ ...prevState, sound: newSound }));
 
-        // Add listener for playback status
         newSound.setOnPlaybackStatusUpdate((status) => {
           if (status.didJustFinish) {
-            setPlayingAudio(false);
+            setState((prevState) => ({ ...prevState, playingAudio: false }));
           }
         });
-
-        console.log("Audio setup successful");
       } catch (error) {
-        setError(`Error setting up audio: ${error.message}`);
-        console.error("Detailed setup error:", error);
+        setState((prevState) => ({
+          ...prevState,
+          error: `Error setting up audio: ${error.message}`,
+        }));
       }
     };
 
     setupAudio();
 
     return () => {
-      if (sound) {
-        sound.unloadAsync();
+      if (state.sound) {
+        state.sound.unloadAsync();
       }
     };
   }, [filePath]);
@@ -77,10 +77,12 @@ const RecordedSummarizeData = ({ route, navigation }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Check if transcript exists in AsyncStorage
         const storedTranscript = await AsyncStorage.getItem(filePath);
         if (storedTranscript) {
-          setTranscript(storedTranscript);
+          setState((prevState) => ({
+            ...prevState,
+            transcript: storedTranscript,
+          }));
         }
       } catch (error) {
         console.error("Error retrieving transcript from AsyncStorage:", error);
@@ -92,39 +94,46 @@ const RecordedSummarizeData = ({ route, navigation }) => {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("blur", () => {
-      // Pause audio when leaving screen
-      if (playingAudio) {
-        sound.pauseAsync();
-        setPlayingAudio(false);
+      if (state.playingAudio) {
+        state.sound.pauseAsync();
+        setState((prevState) => ({ ...prevState, playingAudio: false }));
       }
     });
 
     return unsubscribe;
-  }, [navigation, playingAudio, sound]);
+  }, [navigation, state.playingAudio, state.sound]);
 
   const playPauseAudio = async () => {
-    if (!sound) {
-      setError("Sound object is not initialized");
+    if (!state.sound) {
+      setState((prevState) => ({
+        ...prevState,
+        error: "Sound object is not initialized",
+      }));
       return;
     }
 
     try {
-      if (playingAudio) {
-        await sound.pauseAsync();
+      if (state.playingAudio) {
+        await state.sound.pauseAsync();
       } else {
-        await sound.setPositionAsync(0); // Start playing from the beginning
-        await sound.playAsync();
+        await state.sound.setPositionAsync(0);
+        await state.sound.playAsync();
       }
-      setPlayingAudio(!playingAudio);
+      setState((prevState) => ({
+        ...prevState,
+        playingAudio: !state.playingAudio,
+      }));
     } catch (error) {
-      setError(`Error playing/pausing audio: ${error.message}`);
-      console.error("Detailed play/pause error:", error);
+      setState((prevState) => ({
+        ...prevState,
+        error: `Error playing/pausing audio: ${error.message}`,
+      }));
     }
   };
 
   const transcriptAudio = async () => {
-    setLoading(true);
-    setError(null);
+    const api_route = "/transcribe/";
+    setState((prevState) => ({ ...prevState, loading: true, error: null }));
     try {
       const formData = new FormData();
       formData.append("file", {
@@ -132,70 +141,134 @@ const RecordedSummarizeData = ({ route, navigation }) => {
         type: "audio/mpeg",
         name: "audio.mp3",
       });
-      formData.append("model", "whisper-1");
 
-      const response = await axios.post(
-        "https://api.openai.com/v1/audio/transcriptions",
-        formData,
-        {
-          headers: {
-            // Authorization: `Bearer ${openai.apiKey}`,
-            Authorization: `Bearer ${OPENAI_API_KEY}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const response = await axios.post(SERVER_URL + api_route, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-      setTranscript(response.data.text);
-      console.log(response.data.text);
-      setEditableTranscript(response.data.text); // Initialize editable transcript
-      setIsEditing(true); // Enable editing mode
+      const { transcript } = response.data;
+      setState((prevState) => ({
+        ...prevState,
+        transcript,
+        editableTranscript: transcript,
+        isEditingTranscript: true,
+      }));
 
-      // Save transcript to AsyncStorage
-      await AsyncStorage.setItem(filePath, response.data.text);
+      await AsyncStorage.setItem(filePath, transcript);
     } catch (error) {
-      setError(`Error transcribing audio: ${error.message}`);
-      console.error("Detailed transcription error:", error);
+      setState((prevState) => ({
+        ...prevState,
+        error: `Error transcribing audio: ${error.message}`,
+      }));
     } finally {
-      setLoading(false);
+      setState((prevState) => ({ ...prevState, loading: false }));
+    }
+  };
+
+  const summarizeTranscript = async () => {
+    const api_route = "/summarize/";
+    setState((prevState) => ({ ...prevState, loading: true, error: null }));
+    transcript = state.transcript;
+    console.log("transcript: ", transcript);
+    try {
+      const response = await axios.post(SERVER_URL + api_route, {
+        transcript: state.transcript || (await transcriptAudio()),
+      });
+
+      const { transcribe_summarize } = response.data;
+      setState((prevState) => ({
+        ...prevState,
+        summarizedText: transcribe_summarize,
+        editableSummarizedText: transcribe_summarize, // Initialize editable summarized text
+        isEditingSummarizedText: false, // Set to false if not in editing mode
+        loading: false,
+      }));
+
+      await AsyncStorage.setItem(
+        `${filePath}_summarized`,
+        transcribe_summarize
+      );
+    } catch (error) {
+      setState((prevState) => ({
+        ...prevState,
+        error: `Error transcribing audio: ${error.message}`,
+      }));
+    } finally {
+      setState((prevState) => ({ ...prevState, loading: false }));
     }
   };
 
   const saveEditedTranscript = async () => {
     try {
-      // Save edited transcript to AsyncStorage
-      await AsyncStorage.setItem(filePath, editableTranscript);
-      setIsEditing(false); // Exit editing mode
+      await AsyncStorage.setItem(filePath, state.editableTranscript);
+      setState((prevState) => ({ ...prevState, isEditingTranscript: false }));
       Alert.alert("Success", "Transcript saved successfully!");
     } catch (error) {
       Alert.alert("Error", `Failed to save transcript: ${error.message}`);
-      console.error("Failed to save transcript:", error);
+    }
+  };
+
+  const saveEditedSummarizedText = async () => {
+    try {
+      await AsyncStorage.setItem(
+        `${filePath}_summarized`,
+        state.editableSummarizedText
+      );
+      setState((prevState) => ({
+        ...prevState,
+        isEditingSummarizedText: false,
+      }));
+      Alert.alert("Success", "Summarized text saved successfully!");
+    } catch (error) {
+      Alert.alert("Error", `Failed to save summarized text: ${error.message}`);
     }
   };
 
   const cancelEdit = () => {
-    setEditableTranscript(transcript); // Reset editable transcript to original
-    setIsEditing(false); // Exit editing mode
+    setState((prevState) => ({
+      ...prevState,
+      editableTranscript: state.transcript,
+      isEditingTranscript: false,
+    }));
+  };
+
+  const cancelSummarizeEdit = () => {
+    setState((prevState) => ({
+      ...prevState,
+      editableSummarizedText: state.summarizedText,
+      isEditingSummarizedText: false,
+    }));
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {error && <Text style={styles.errorText}>Error: {error}</Text>}
+      {state.error && (
+        <Text style={styles.errorText}>Error: {state.error}</Text>
+      )}
       <Text>Subject: {subject}</Text>
       <Text>Title: {title}</Text>
       <Text>Duration: {duration}</Text>
       <Text>Date: {datetime}</Text>
       <Text>File Path: {filePath}</Text>
       <TouchableOpacity onPress={playPauseAudio} style={styles.button}>
-        <Text style={styles.buttonText}>{playingAudio ? "Pause" : "Play"}</Text>
+        <Text style={styles.buttonText}>
+          {state.playingAudio ? "Pause" : "Play"}
+        </Text>
       </TouchableOpacity>
-      {transcript ? null : (
+      {!state.transcript && (
         <TouchableOpacity onPress={transcriptAudio} style={styles.button}>
           <Text style={styles.buttonText}>Transcribe Audio</Text>
         </TouchableOpacity>
       )}
-      {loading && <ActivityIndicator size="large" color="#0000ff" />}
-      {isEditing ? (
+      {!state.summarizedText && (
+        <TouchableOpacity onPress={summarizeTranscript} style={styles.button}>
+          <Text style={styles.buttonText}>Summarize Transcript</Text>
+        </TouchableOpacity>
+      )}
+      {state.loading && <ActivityIndicator size="large" color="#0000ff" />}
+      {state.isEditingTranscript ? (
         <View style={styles.editableTranscriptContainer}>
           <ScrollView
             style={styles.editableTranscriptScrollView}
@@ -203,16 +276,21 @@ const RecordedSummarizeData = ({ route, navigation }) => {
             <TextInput
               style={styles.editableTranscriptInput}
               multiline
-              value={editableTranscript}
-              onChangeText={setEditableTranscript}
-              scrollEnabled={true}
+              value={state.editableTranscript}
+              onChangeText={(text) =>
+                setState((prevState) => ({
+                  ...prevState,
+                  editableTranscript: text,
+                }))
+              }
+              scrollEnabled
             />
           </ScrollView>
           <View style={styles.editableButtonContainer}>
             <TouchableOpacity
               onPress={saveEditedTranscript}
               style={styles.editableButton}>
-              <Text style={styles.buttonText}>Save</Text>
+              <Text style={styles.buttonText}>Save Transcript</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={cancelEdit}
@@ -224,80 +302,166 @@ const RecordedSummarizeData = ({ route, navigation }) => {
       ) : (
         <View style={styles.transcriptContainer}>
           <Text style={styles.transcriptTitle}>Transcript:</Text>
-          <Text style={styles.transcript}>{transcript}</Text>
+          <Text style={styles.transcript}>{state.transcript}</Text>
+          {state.transcript && (
+            <TouchableOpacity
+              onPress={() =>
+                setState((prevState) => ({
+                  ...prevState,
+                  isEditingTranscript: true,
+                }))
+              }
+              style={styles.editButton}>
+              <Text style={styles.buttonText}>Edit Transcript</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+      {state.isEditingSummarizedText ? (
+        <View style={styles.editableSummarizedTextContainer}>
+          <ScrollView
+            style={styles.editableSummarizedTextScrollView}
+            contentContainerStyle={
+              styles.editableSummarizedTextScrollViewContent
+            }>
+            <TextInput
+              style={styles.editableSummarizedTextInput}
+              multiline
+              value={state.editableSummarizedText}
+              onChangeText={(text) =>
+                setState((prevState) => ({
+                  ...prevState,
+                  editableSummarizedText: text,
+                }))
+              }
+              scrollEnabled
+            />
+          </ScrollView>
+          <View style={styles.editableButtonContainer}>
+            <TouchableOpacity
+              onPress={saveEditedSummarizedText}
+              style={styles.editableButton}>
+              <Text style={styles.buttonText}>Save Summarized Text</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={cancelSummarizeEdit}
+              style={styles.editableButton}>
+              <Text style={styles.buttonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.summarizedTextContainer}>
+          <Text style={styles.summarizedTextTitle}>Summarized Text:</Text>
+          <Text style={styles.summarizedText}>{state.summarizedText}</Text>
+          {state.summarizedText && (
+            <TouchableOpacity
+              onPress={() =>
+                setState((prevState) => ({
+                  ...prevState,
+                  isEditingSummarizedText: true,
+                }))
+              }
+              style={styles.editButton}>
+              <Text style={styles.buttonText}>Edit Summarized Text</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </ScrollView>
   );
 };
-
 export default RecordedSummarizeData;
-
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    alignItems: "center",
-    justifyContent: "center",
     padding: 20,
-  },
-  button: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: "#2196F3",
-    borderRadius: 5,
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
+    flexGrow: 1,
+    justifyContent: "flex-start",
   },
   errorText: {
     color: "red",
     marginBottom: 10,
   },
-  transcriptContainer: {
-    marginTop: 20,
+  button: {
+    backgroundColor: "#007BFF",
+    padding: 10,
+    borderRadius: 5,
+    marginVertical: 10,
     alignItems: "center",
   },
-  transcriptTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  transcript: {
-    marginTop: 10,
+  buttonText: {
+    color: "#FFFFFF",
     fontSize: 16,
-    textAlign: "center",
   },
   editableTranscriptContainer: {
     marginTop: 20,
-    alignItems: "center",
   },
   editableTranscriptScrollView: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    width: "100%",
     maxHeight: 200,
   },
   editableTranscriptScrollViewContent: {
-    flexGrow: 1,
-    alignItems: "center",
+    padding: 10,
   },
   editableTranscriptInput: {
+    borderWidth: 1,
+    borderColor: "#CCCCCC",
+    borderRadius: 5,
     padding: 10,
-    fontSize: 16,
-    width: "auto",
-    overflow: "new-line",
+    textAlignVertical: "top",
   },
   editableButtonContainer: {
     flexDirection: "row",
-    marginTop: 10,
     justifyContent: "space-around",
-    width: "100%",
+    marginTop: 10,
   },
   editableButton: {
+    backgroundColor: "#28A745",
     padding: 10,
-    backgroundColor: "#2196F3",
     borderRadius: 5,
-    width: "40%",
+  },
+  transcriptContainer: {
+    marginTop: 20,
+  },
+  transcriptTitle: {
+    fontWeight: "bold",
+    fontSize: 18,
+    marginBottom: 10,
+  },
+  transcript: {
+    fontSize: 16,
+  },
+  editButton: {
+    backgroundColor: "#FFC107",
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 10,
     alignItems: "center",
+  },
+  editableSummarizedTextContainer: {
+    marginTop: 20,
+  },
+  editableSummarizedTextScrollView: {
+    maxHeight: 200,
+  },
+  editableSummarizedTextScrollViewContent: {
+    padding: 10,
+  },
+  editableSummarizedTextInput: {
+    borderWidth: 1,
+    borderColor: "#CCCCCC",
+    borderRadius: 5,
+    padding: 10,
+    textAlignVertical: "top",
+  },
+  summarizedTextContainer: {
+    marginTop: 20,
+  },
+  summarizedTextTitle: {
+    fontWeight: "bold",
+    fontSize: 18,
+    marginBottom: 10,
+  },
+  summarizedText: {
+    fontSize: 16,
   },
 });

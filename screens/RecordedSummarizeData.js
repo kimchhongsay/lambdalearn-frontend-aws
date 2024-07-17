@@ -14,7 +14,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DropdownPicker from "../components/assets/DropdownPicker"; // Adjust the import path as per your project structure
 
-const SERVER_URL = "https://5f15-223-204-17-56.ngrok-free.app";
+const SERVER_URL = "https://b48b-202-29-20-76.ngrok-free.app";
 
 const transcriptLanguageOptions = [
   { value: "en-US", label: "English" },
@@ -162,8 +162,8 @@ const RecordedSummarizeData = ({ route, navigation }) => {
         type: "audio/mpeg",
         name: "audio.mp3",
       });
-      // Assuming the API expects the language as part of the form data
-      formData.append("language", state.selectedTranscriptLanguage);
+      // // Assuming the API expects the language as part of the form data
+      // formData.append("language", state.selectedTranscriptLanguage);
 
       const response = await axios.post(SERVER_URL + api_route, formData, {
         headers: {

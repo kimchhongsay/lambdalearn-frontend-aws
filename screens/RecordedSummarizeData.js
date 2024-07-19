@@ -38,7 +38,7 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     summarizedText: "",
     editableSummarizedText: "",
     isEditingSummarizedText: false,
-    selectedTranscriptLanguage: transcriptLanguageOptions[0].value,
+    selectedSummarizeLanguage: transcriptLanguageOptions[0].value,
   });
 
   useEffect(() => {
@@ -163,7 +163,7 @@ const RecordedSummarizeData = ({ route, navigation }) => {
         name: "audio.mp3",
       });
       // // Assuming the API expects the language as part of the form data
-      // formData.append("language", state.selectedTranscriptLanguage);
+      // formData.append("language", state.selectedSummarizeLanguage);
 
       const response = await axios.post(SERVER_URL + api_route, formData, {
         headers: {
@@ -278,7 +278,7 @@ const RecordedSummarizeData = ({ route, navigation }) => {
   const handleTranscriptLanguageSelect = (language) => {
     setState((prevState) => ({
       ...prevState,
-      selectedTranscriptLanguage: language,
+      selectedSummarizeLanguage: language,
     }));
   };
 

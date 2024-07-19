@@ -45,7 +45,7 @@ const requestPermission = async (permissionType, title, message) => {
 };
 
 const formatDuration = (duration) => {
-  const totalSeconds = Math.floor(duration / 1000); // Convert from milliseconds to seconds
+  const totalSeconds = Math.floor(duration / 1000);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
@@ -99,7 +99,7 @@ const NewRecord = ({ visible, onClose }) => {
       const result = await audioRecorderPlayer.startRecorder();
       setStartTime(Date.now());
       audioRecorderPlayer.addRecordBackListener((e) => {
-        setRecordTime(formatDuration(e.currentPosition)); // Use the helper function
+        setRecordTime(formatDuration(e.currentPosition));
       });
       setIsRecording(true);
       setIsPaused(false);
@@ -129,8 +129,9 @@ const NewRecord = ({ visible, onClose }) => {
 
   const saveRecordedFile = async (sourceUri) => {
     const datetime = new Date().toISOString().replace(/[:.]/g, "-");
-    const filename = generateFilename(selectedSubject, recordName, datetime);
-    // const destinationUri = `${FileSystem.ExternalDirectoryPath}/${filename}`;
+    const subjectToSave =
+      selectedSubject === "Other" ? otherSubject : selectedSubject;
+    const filename = generateFilename(subjectToSave, recordName, datetime);
     const destinationUri = `${FileSystem.documentDirectory}/${filename}`;
 
     try {
@@ -144,7 +145,7 @@ const NewRecord = ({ visible, onClose }) => {
 
       const metadata = {
         type: "userAudio",
-        subject: selectedSubject,
+        subject: subjectToSave,
         title: recordName,
         datetime: datetime,
         duration: duration,
@@ -193,9 +194,10 @@ const NewRecord = ({ visible, onClose }) => {
     }
 
     const datetime = new Date().toISOString().replace(/[:.]/g, "-");
-    const filename = generateFilename(selectedSubject, recordName, datetime);
+    const subjectToSave =
+      selectedSubject === "Other" ? otherSubject : selectedSubject;
+    const filename = generateFilename(subjectToSave, recordName, datetime);
 
-    // Use FileSystem.documentDirectory instead of ExternalDirectoryPath
     const destinationUri = `${FileSystem.documentDirectory}${filename}`;
 
     try {
@@ -215,7 +217,7 @@ const NewRecord = ({ visible, onClose }) => {
 
       const metadata = {
         type: "userAudio",
-        subject: selectedSubject,
+        subject: subjectToSave,
         title: recordName,
         datetime: datetime,
         duration: duration,
@@ -255,23 +257,10 @@ const NewRecord = ({ visible, onClose }) => {
     }
   };
 
-  // const handleSubjectSelect = (index, value) => {
-  //   setSelectedSubject(value);
-  //   if (value !== "Other") {
-  //     setOtherSubject("");
-  //   }
-  // };
-
-  // const handleUnselectedAudioImport = () => {
-  //   setSelectedFile(null);
-  //   setRecordName("Untitled");
-  // };
-
   const handleSubjectSelect = (index, value) => {
-    if (value === "Other") {
-      setSelectedSubject(otherSubject || "Other");
-    } else {
-      setSelectedSubject(value);
+    setSelectedSubject(value);
+    if (value !== "Other") {
+      setOtherSubject("");
     }
   };
 
@@ -279,6 +268,7 @@ const NewRecord = ({ visible, onClose }) => {
     setSelectedFile(null);
     setRecordName("Untitled");
   };
+
   return (
     <Modal visible={visible} transparent={true} onRequestClose={onClose}>
       <KeyboardAvoidingView
@@ -320,7 +310,6 @@ const NewRecord = ({ visible, onClose }) => {
           )}
 
           {selectedFile ? (
-            // If selectedFile is not null, show the "Remove" button
             <TouchableOpacity
               style={styles.importButton}
               onPress={handleUnselectedAudioImport}>
@@ -337,7 +326,6 @@ const NewRecord = ({ visible, onClose }) => {
               </Text>
             </TouchableOpacity>
           ) : (
-            // If selectedFile is null, show the "Import audio" button
             <TouchableOpacity
               style={styles.importButton}
               onPress={handleFileSelect}>

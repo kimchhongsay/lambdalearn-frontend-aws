@@ -123,8 +123,8 @@ export default function App() {
             <Stack.Screen
               name="RecordedSummarizeData"
               component={RecordedSummarizeData}
-              // options={{ title: "Record Details & Summary" }}
-              options={{ headerShown: false }}
+              options={{ title: "Record Details & Summary" }}
+              // options={{ headerShown: false }}
             />
           </>
         ) : (

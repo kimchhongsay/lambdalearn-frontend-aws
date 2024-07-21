@@ -287,7 +287,7 @@ const NewRecord = ({ visible, onClose }) => {
             onChangeText={setRecordName}
           />
 
-          <Text style={{ marginTop: 15 }}>Subject:</Text>
+          <Text style={{ marginTop: 15, fontSize: 16 }}>Subject:</Text>
 
           <ModalDropdown
             options={subjects}
@@ -297,7 +297,7 @@ const NewRecord = ({ visible, onClose }) => {
             dropdownStyle={styles.dropdownDropdown}
             dropdownTextStyle={styles.dropdownItemText}
             defaultIndex={0}
-            defaultValue="Choose a subject"
+            defaultValue="Choose audio subject"
           />
 
           {selectedSubject === "Other" && (
@@ -310,16 +310,16 @@ const NewRecord = ({ visible, onClose }) => {
           )}
 
           {selectedFile ? (
-            <TouchableOpacity
-              style={styles.importButton}
-              onPress={handleUnselectedAudioImport}>
-              <Text>Selected File:</Text>
+            <TouchableOpacity onPress={handleUnselectedAudioImport}>
+              <Text style={{ fontSize: 16, marginBottom: 10 }}>
+                Selected File:
+              </Text>
               <Text
                 style={{
                   fontStyle: "italic",
                   fontSize: 16,
                   padding: 10,
-                  borderRadius: 10,
+                  borderRadius: 5,
                   backgroundColor: "#d3d3d379",
                 }}>
                 {selectedFile.name}
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     height: 60,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 10,
+    marginVertical: 10,
   },
   dropdownText: {
     fontSize: 20,
@@ -446,6 +446,10 @@ const styles = StyleSheet.create({
     marginTop: 15,
     alignItems: "center",
     justifyContent: "center",
+    padding: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: "#000000",
   },
   pauseButton: {
     backgroundColor: "#f5a623",

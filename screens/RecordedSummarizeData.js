@@ -8,19 +8,23 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  Modal,
 } from "react-native";
 import { Audio } from "expo-av";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import DropdownPicker from "../components/assets/DropdownPicker"; // Adjust the import path as per your project structure
+import DropdownPicker from "../components/assets/DropdownPicker"; // Adjust the import path as per your project structure\
+import HTML from "react-native-render-html";
 
-const SERVER_URL = "https://b48b-202-29-20-76.ngrok-free.app";
+const SERVER_URL =
+  "https://917a-2001-fb1-149-d1c0-1850-4fe3-8dd0-9b7e.ngrok-free.app";
 
-const transcriptLanguageOptions = [
-  { value: "en-US", label: "English" },
-  { value: "th-TH", label: "Thai" },
-  { value: "km-KH", label: "Khmer" },
-  { value: "fr-FR", label: "French" },
+const summarizeLanguageOption = [
+  { value: "Default", label: "Default" },
+  { value: "English", label: "English" },
+  { value: "Thai", label: "Thai" },
+  { value: "Khmer", label: "Khmer" },
+  { value: "French", label: "French" },
   // Add more languages as needed
 ];
 
@@ -38,7 +42,7 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     summarizedText: "",
     editableSummarizedText: "",
     isEditingSummarizedText: false,
-    selectedSummarizeLanguage: transcriptLanguageOptions[0].value,
+    selectedSummarizeLanguage: summarizeLanguageOption[0].value,
   });
 
   useEffect(() => {
@@ -162,8 +166,6 @@ const RecordedSummarizeData = ({ route, navigation }) => {
         type: "audio/mpeg",
         name: "audio.mp3",
       });
-      // // Assuming the API expects the language as part of the form data
-      // formData.append("language", state.selectedSummarizeLanguage);
 
       const response = await axios.post(SERVER_URL + api_route, formData, {
         headers: {
@@ -199,6 +201,7 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     try {
       const response = await axios.post(SERVER_URL + api_route, {
         transcript: transcript,
+        language: state.selectedSummarizeLanguage,
       });
 
       const { transcribe_summarize } = response.data;
@@ -275,189 +278,223 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     }));
   };
 
-  const handleTranscriptLanguageSelect = (language) => {
+  const handleSummarizeLanguageSelect = (language) => {
     setState((prevState) => ({
       ...prevState,
       selectedSummarizeLanguage: language,
     }));
+    console.log(state.selectedSummarizeLanguage);
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {state.error && (
-        <Text style={styles.errorText}>Error: {state.error}</Text>
-      )}
-      <Text>Subject: {subject}</Text>
-      <Text>Title: {title}</Text>
-      <Text>Duration: {duration}</Text>
-      <Text>Date: {datetime}</Text>
-      <Text>File Path: {filePath}</Text>
-      <TouchableOpacity onPress={playPauseAudio} style={styles.button}>
-        <Text style={styles.buttonText}>
-          {state.playingAudio ? "Pause" : "Play"}
-        </Text>
-      </TouchableOpacity>
+    <View style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text>Subject: {subject}</Text>
+        <Text>Title: {title}</Text>
+        <Text>Duration: {duration}</Text>
+        <Text>Date: {datetime}</Text>
+        <Text>File Path: {filePath}</Text>
 
-      {!state.transcript && (
-        <View>
-          <Text style={styles.heading}>Selected transcribe Language: </Text>
-          <DropdownPicker
-            options={transcriptLanguageOptions.map((option) => option.label)}
-            onSelect={(language) =>
-              handleTranscriptLanguageSelect(
-                transcriptLanguageOptions.find(
-                  (option) => option.label === language
-                ).value
-              )
-            }
-            defaultValue={transcriptLanguageOptions[0].label}
-          />
-          <TouchableOpacity onPress={transcriptAudio} style={styles.button}>
-            <Text style={styles.buttonText}>Transcribe Audio</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      {!state.summarizedText && state.transcript && (
-        <TouchableOpacity onPress={summarizeTranscript} style={styles.button}>
-          <Text style={styles.buttonText}>Summarize Transcript</Text>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={playPauseAudio}
+          disabled={state.loading}>
+          <Text style={styles.buttonText}>
+            {state.playingAudio ? "Pause" : "Play"} Audio
+          </Text>
         </TouchableOpacity>
-      )}
-      {state.loading && <ActivityIndicator size="large" color="#0000ff" />}
-      {state.transcript && (
-        <>
-          <Text style={styles.heading}>Transcript:</Text>
-          {state.isEditingTranscript ? (
-            <>
-              <TextInput
-                style={styles.input}
-                multiline
-                value={state.editableTranscript}
-                onChangeText={(text) =>
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={transcriptAudio}
+          disabled={state.loading}>
+          <Text style={styles.buttonText}>Transcript Audio</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.textHeader}>Transcript Text:</Text>
+        {state.isEditingTranscript ? (
+          <View>
+            <TextInput
+              style={styles.textInput}
+              multiline
+              value={state.editableTranscript}
+              onChangeText={(text) =>
+                setState((prevState) => ({
+                  ...prevState,
+                  editableTranscript: text,
+                }))
+              }
+            />
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={saveEditedTranscript}>
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={cancelEdit}>
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity
+            onPress={() =>
+              setState((prevState) => ({
+                ...prevState,
+                isEditingTranscript: true,
+              }))
+            }>
+            <Text style={styles.displayText}>{state.transcript}</Text>
+          </TouchableOpacity>
+        )}
+
+        {state.transcript && (
+          <View style={{ marginTop: 20 }}>
+            <View
+              style={{
+                padding: 5,
+                flexDirection: "column",
+              }}>
+              <Text style={styles.textHeader}>Summarize language:</Text>
+              {/* <DropdownPicker
+                options={summarizeLanguageOption.map((opt) => opt.label)}
+                onSelect={handleSummarizeLanguageSelect}
+                defaultValue={state.selectedSummarizeLanguage}
+              /> */}
+              <DropdownPicker
+                options={summarizeLanguageOption}
+                onSelect={(value) =>
                   setState((prevState) => ({
                     ...prevState,
-                    editableTranscript: text,
+                    selectedSummarizeLanguage: value,
                   }))
                 }
+                defaultValue={state.selectedSummarizeLanguage}
               />
+            </View>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={summarizeTranscript}
+              disabled={state.loading}>
+              <Text style={styles.buttonText}>Summarize Transcript</Text>
+            </TouchableOpacity>
+            <Text style={styles.textHeader}>Summarized Text:</Text>
+          </View>
+        )}
+        {state.isEditingSummarizedText ? (
+          <View>
+            <TextInput
+              style={styles.textInput}
+              multiline
+              value={state.editableSummarizedText}
+              onChangeText={(text) =>
+                setState((prevState) => ({
+                  ...prevState,
+                  editableSummarizedText: text,
+                }))
+              }
+            />
+            <View style={styles.buttonContainer}>
               <TouchableOpacity
-                onPress={saveEditedTranscript}
-                style={styles.saveButton}>
+                style={styles.button}
+                onPress={saveEditedSummarizedText}>
                 <Text style={styles.buttonText}>Save</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={cancelEdit}
-                style={styles.cancelButton}>
+                style={styles.button}
+                onPress={cancelSummarizeEdit}>
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <Text>{state.transcript}</Text>
-              <TouchableOpacity
-                onPress={() =>
-                  setState((prevState) => ({
-                    ...prevState,
-                    isEditingTranscript: true,
-                  }))
-                }
-                style={styles.button}>
-                <Text style={styles.buttonText}>Edit Transcript</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </>
-      )}
-      {state.summarizedText && (
-        <>
-          <Text style={styles.heading}>Summarized Text:</Text>
-          {state.isEditingSummarizedText ? (
-            <>
-              <TextInput
-                style={styles.input}
-                multiline
-                value={state.editableSummarizedText}
-                onChangeText={(text) =>
-                  setState((prevState) => ({
-                    ...prevState,
-                    editableSummarizedText: text,
-                  }))
-                }
-              />
-              <TouchableOpacity
-                onPress={saveEditedSummarizedText}
-                style={styles.saveButton}>
-                <Text style={styles.buttonText}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={cancelSummarizeEdit}
-                style={styles.cancelButton}>
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <Text>{state.summarizedText}</Text>
-              <TouchableOpacity
-                onPress={() =>
-                  setState((prevState) => ({
-                    ...prevState,
-                    isEditingSummarizedText: true,
-                  }))
-                }
-                style={styles.button}>
-                <Text style={styles.buttonText}>Edit Summarized Text</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </>
-      )}
-    </ScrollView>
+            </View>
+          </View>
+        ) : (
+          <View>
+            <ScrollView style={styles.summarizeTextContainer}>
+              <HTML source={{ html: state.editableSummarizedText }} />
+            </ScrollView>
+          </View>
+        )}
+        {state.summarizedText !== "" && (
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              setState((prevState) => ({
+                ...prevState,
+                isEditingSummarizedText: true,
+              }))
+            }>
+            <Text style={styles.buttonText}>Edit Summarize</Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
+      <Modal transparent={true} visible={state.loading}>
+        <View style={styles.modalBackground}>
+          <View style={styles.loadingModal}>
+            <ActivityIndicator size="large" color="#0000ff" />
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-  },
-  button: {
-    backgroundColor: "#2196F3",
+    flexGrow: 1,
     padding: 10,
-    marginVertical: 10,
+  },
+  modalBackground: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent background
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingModal: {
+    backgroundColor: "white",
+    padding: 20,
     borderRadius: 5,
-  },
-  buttonText: {
-    color: "white",
-    textAlign: "center",
-    fontSize: 16,
-  },
-  heading: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 20,
   },
   errorText: {
     color: "red",
     marginBottom: 10,
   },
-  input: {
-    borderColor: "gray",
+  button: {
+    backgroundColor: "#007bff",
+    padding: 10,
+    borderRadius: 5,
+    marginVertical: 5,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  textInput: {
+    fontSize: 18,
+    borderColor: "#ccc",
     borderWidth: 1,
-    padding: 10,
-    marginTop: 10,
     borderRadius: 5,
-    textAlignVertical: "top",
+    padding: 10,
+    marginBottom: 10,
+    minHeight: 60,
   },
-  saveButton: {
-    backgroundColor: "#4CAF50",
-    padding: 10,
-    marginVertical: 10,
-    borderRadius: 5,
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
-  cancelButton: {
-    backgroundColor: "#F44336",
-    padding: 10,
-    marginVertical: 10,
+  displayText: {
+    fontSize: 18,
+    textAlign: "justify",
+  },
+  textHeader: {
+    paddingVertical: 10,
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  summarizeTextContainer: {
+    backgroundColor: "#dfdfdf",
     borderRadius: 5,
+    padding: 10,
   },
 });
 

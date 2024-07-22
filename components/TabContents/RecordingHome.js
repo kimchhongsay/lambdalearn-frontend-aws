@@ -22,42 +22,6 @@ const RecordingHome = () => {
   const [sortOption, setSortOption] = useState("default");
   const { activeTopTab, setActiveTopTab } = useContext(MyContext);
 
-  // const retrieveRecordings = async () => {
-  //   try {
-  //     const dir = FileSystem.documentDirectory;
-  //     const files = await FileSystem.readDirectoryAsync(dir);
-  //     const audioFiles = files.filter((file) => file.endsWith(".mp3"));
-
-  //     const formattedRecordings = await Promise.all(
-  //       audioFiles.map(async (file) => {
-  //         const filePath = `${dir}${file}`;
-  //         const metadataPath = `${filePath}.meta`;
-
-  //         try {
-  //           const metadataString = await FileSystem.readAsStringAsync(
-  //             metadataPath
-  //           );
-  //           const metadata = JSON.parse(metadataString);
-  //           return {
-  //             ...metadata,
-  //             filePath, // Ensure this is correct
-  //           };
-  //         } catch (error) {
-  //           console.error(`Error reading metadata for ${file}:`, error);
-  //           return null;
-  //         }
-  //       })
-  //     );
-
-  //     const validRecordings = formattedRecordings.filter(
-  //       (recording) => recording !== null
-  //     );
-  //     setRecordings(validRecordings);
-  //   } catch (error) {
-  //     console.error("Error retrieving recordings:", error);
-  //   }
-  // };
-
   const retrieveRecordings = async () => {
     try {
       const dir = FileSystem.documentDirectory;

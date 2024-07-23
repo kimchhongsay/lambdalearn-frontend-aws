@@ -18,8 +18,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import Share from "react-native-share";
 import * as FileSystem from "expo-file-system";
 
-const SERVER_URL =
-  "https://70cd-2001-fb1-149-d1c0-b5af-3600-1352-f3ff.ngrok-free.app";
+const SERVER_URL = "https://7758-124-122-14-119.ngrok-free.app";
 
 const summarizeLanguageOption = [
   { value: "Default", label: "Default" },
@@ -42,13 +41,11 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     loadingTranscript: false,
     loadingSummarize: false,
     isEditingTranscript: false,
-    summarizedText: "",
-    editableSummarizedText: "",
-    isEditingSummarizedText: false,
-    selectedSummarizeLanguage: summarizeLanguageOption[0].value,
+    summarizedTexts: {}, // Store summaries for each language
+    isEditingSummarizedText: {}, // Track editing state for each language
+    selectedSummarizeLanguages: [],
     showFullTranscript: false,
   });
-
   useEffect(() => {
     const setupAudio = async () => {
       try {
@@ -96,9 +93,6 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     const fetchData = async () => {
       try {
         const storedTranscript = await AsyncStorage.getItem(filePath);
-        const storedSummarizedText = await AsyncStorage.getItem(
-          `${filePath}_summarized`
-        );
         if (storedTranscript) {
           setState((prevState) => ({
             ...prevState,
@@ -106,13 +100,19 @@ const RecordedSummarizeData = ({ route, navigation }) => {
             editableTranscript: storedTranscript,
           }));
         }
-        if (storedSummarizedText) {
-          setState((prevState) => ({
-            ...prevState,
-            summarizedText: storedSummarizedText,
-            editableSummarizedText: storedSummarizedText,
-          }));
+
+        // Fetch summarized texts for each language
+        const summaries = {};
+        for (const languageObj of summarizeLanguageOption) {
+          const language = languageObj.value;
+          const storedSummary = await AsyncStorage.getItem(
+            `${filePath}_summarized_${language}`
+          );
+          if (storedSummary) {
+            summaries[language] = storedSummary;
+          }
         }
+        setState((prevState) => ({ ...prevState, summarizedTexts: summaries }));
       } catch (error) {
         console.error("Error retrieving data from AsyncStorage:", error);
       }
@@ -202,44 +202,56 @@ const RecordedSummarizeData = ({ route, navigation }) => {
   };
 
   const summarizeTranscript = async () => {
-    const api_route = "/summarize/";
     setState((prevState) => ({
       ...prevState,
       loadingSummarize: true,
       error: null,
     }));
+
     const transcript = state.transcript || (await transcriptAudio());
     console.log("Sending transcript for summarization: ", transcript);
-    try {
-      const response = await axios.post(SERVER_URL + api_route, {
-        transcript: transcript,
-        language: state.selectedSummarizeLanguage,
-      });
 
-      const { transcribe_summarize } = response.data;
-      setState((prevState) => ({
-        ...prevState,
-        summarizedText: transcribe_summarize,
-        editableSummarizedText: transcribe_summarize,
-        isEditingSummarizedText: false,
-      }));
+    for (let i = 0; i < state.selectedSummarizeLanguage.length; i++) {
+      try {
+        const language = state.selectedSummarizeLanguage[i];
+        const response = await axios.post(SERVER_URL + "/summarize/", {
+          transcript: transcript,
+          language: language,
+        });
 
-      await AsyncStorage.setItem(
-        `${filePath}_summarized`,
-        transcribe_summarize
-      );
-    } catch (error) {
-      console.error(
-        "Error during summarization:",
-        error.response ? error.response.data : error.message
-      );
-      setState((prevState) => ({
-        ...prevState,
-        error: `Error summarizing transcript: ${error.message}`,
-      }));
-    } finally {
-      setState((prevState) => ({ ...prevState, loadingSummarize: false }));
+        const { transcribe_summarize } = response.data;
+
+        // Store the summarized text for the specific language
+        setState((prevState) => ({
+          ...prevState,
+          summarizedTexts: {
+            ...prevState.summarizedTexts,
+            [language]: transcribe_summarize,
+          },
+          isEditingSummarizedText: {
+            ...prevState.isEditingSummarizedText,
+            [language]: false,
+          },
+        }));
+
+        await AsyncStorage.setItem(
+          `${filePath}_summarized_${language}`,
+          transcribe_summarize
+        );
+      } catch (error) {
+        console.error(
+          "Error during summarization:",
+          error.response ? error.response.data : error.message
+        );
+        // Handle the error for the specific language (e.g., display an error message)
+        setState((prevState) => ({
+          ...prevState,
+          error: `Error summarizing transcript for ${language}: ${error.message}`,
+        }));
+      }
     }
+
+    setState((prevState) => ({ ...prevState, loadingSummarize: false }));
   };
 
   const saveEditedTranscript = async () => {
@@ -256,16 +268,18 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     }
   };
 
-  const saveEditedSummarizedText = async () => {
+  const saveEditedSummarizedText = async (language) => {
     try {
       await AsyncStorage.setItem(
-        `${filePath}_summarized`,
-        state.editableSummarizedText
+        `${filePath}_summarized_${language}`,
+        state.summarizedTexts[language]
       );
       setState((prevState) => ({
         ...prevState,
-        summarizedText: state.editableSummarizedText,
-        isEditingSummarizedText: false,
+        isEditingSummarizedText: {
+          ...prevState.isEditingSummarizedText,
+          [language]: false,
+        },
       }));
       Alert.alert("Success", "Summarized text saved successfully!");
     } catch (error) {
@@ -281,20 +295,21 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     }));
   };
 
-  const cancelSummarizeEdit = () => {
+  const cancelSummarizeEdit = (language) => {
     setState((prevState) => ({
       ...prevState,
-      editableSummarizedText: state.summarizedText,
-      isEditingSummarizedText: false,
+      isEditingSummarizedText: {
+        ...prevState.isEditingSummarizedText,
+        [language]: false,
+      },
     }));
   };
 
-  const handleSummarizeLanguageSelect = (language) => {
+  const handleSummarizeLanguageSelect = (selectedLanguages) => {
     setState((prevState) => ({
       ...prevState,
-      selectedSummarizeLanguage: language,
+      selectedSummarizeLanguages: selectedLanguages,
     }));
-    console.log(state.selectedSummarizeLanguage);
   };
 
   const toggleShowFullTranscript = () => {
@@ -304,23 +319,24 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     }));
   };
 
-  const shareSummarizedText = async () => {
-    const fileName = "summarizedText.txt";
+  const shareSummarizedText = async (language) => {
+    const fileName = `summarizedText_${language}.txt`;
     const fileUri = FileSystem.documentDirectory + fileName;
 
     try {
-      // Create a .txt file with the summarized text
-      await FileSystem.writeAsStringAsync(fileUri, state.summarizedText);
+      await FileSystem.writeAsStringAsync(
+        fileUri,
+        state.summarizedTexts[language]
+      );
 
-      // Share the file using react-native-share
       const shareOptions = {
-        title: `Summarized Text, Subject: ${subject} Date: ${datetime}`,
+        title: `Summarized Text (${language}), Subject: ${subject} Date: ${datetime}`,
         url: fileUri,
-        type: "text/plain", // Specify the MIME type
-        subject: `Summarized Text; Subject: ${subject}; Date: ${datetime}`,
+        type: "text/plain",
+        subject: `Summarized Text (${language}); Subject: ${subject}; Date: ${datetime}`,
       };
 
-      await Share.open(shareOptions); // Open the share dialog
+      await Share.open(shareOptions);
       alert("Summarized text shared successfully!");
     } catch (error) {
       console.error("Error sharing summarized text:", error);
@@ -425,7 +441,7 @@ const RecordedSummarizeData = ({ route, navigation }) => {
           }
           defaultValue={state.selectedSummarizeLanguage}
         />
-        <View style={styles.summarizeContainer}>
+        {/* <View style={styles.summarizeContainer}>
           <Text style={styles.heading}>Summarized Text:</Text>
           <TouchableOpacity
             onPress={summarizeTranscript}
@@ -491,6 +507,84 @@ const RecordedSummarizeData = ({ route, navigation }) => {
                 </View>
               )}
             </View>
+          )}
+        </View> */}
+        <View style={styles.summarizeContainer}>
+          <Text style={styles.heading}>Summarized Text:</Text>
+          <TouchableOpacity
+            onPress={summarizeTranscript}
+            style={styles.actionButton}>
+            {state.loadingSummarize ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text style={styles.actionButtonText}>Summarize Transcript</Text>
+            )}
+          </TouchableOpacity>
+
+          {Object.entries(state.summarizedTexts).map(
+            ([language, summarizedText]) => (
+              <View key={language} style={styles.languageSummaryContainer}>
+                <Text style={styles.languageHeading}>{language}:</Text>
+                {state.isEditingSummarizedText[language] ? (
+                  <View>
+                    <TextInput
+                      style={styles.input}
+                      value={summarizedText}
+                      onChangeText={(text) =>
+                        setState((prevState) => ({
+                          ...prevState,
+                          summarizedTexts: {
+                            ...prevState.summarizedTexts,
+                            [language]: text,
+                          },
+                        }))
+                      }
+                      multiline
+                    />
+                    <View style={styles.buttonContainer}>
+                      <TouchableOpacity
+                        onPress={() => saveEditedSummarizedText(language)}
+                        style={[styles.button, styles.saveButton]}>
+                        <Text style={styles.buttonText}>Save Summary</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => cancelSummarizeEdit(language)}
+                        style={[styles.button, styles.cancelButton]}>
+                        <Text style={styles.buttonText}>Cancel</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <View>
+                    <View style={styles.summarizeButtonContainer}>
+                      <TouchableOpacity
+                        onPress={() =>
+                          setState((prevState) => ({
+                            ...prevState,
+                            isEditingSummarizedText: {
+                              ...prevState.isEditingSummarizedText,
+                              [language]: true,
+                            },
+                          }))
+                        }
+                        style={styles.editButton}>
+                        <Text>Edit</Text>
+                        <MaterialIcons name="edit" size={20} color="#2196F3" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.editButton}
+                        onPress={() => shareSummarizedText(language)}>
+                        <Text>Share</Text>
+                        <MaterialIcons name="share" size={20} color="#2196F3" />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.textContainer}>
+                      <HTML source={{ html: summarizedText }} />
+                    </View>
+                  </View>
+                )}
+              </View>
+            )
           )}
         </View>
       </ScrollView>

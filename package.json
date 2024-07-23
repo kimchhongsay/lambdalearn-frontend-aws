@@ -19,7 +19,7 @@
     "@react-navigation/stack": "^6.3.29",
     "@types/react-native-dotenv": "^0.2.2",
     "axios": "^1.7.2",
-    "expo": "~51.0.8",
+    "expo": "^51.0.22",
     "expo-application": "~5.9.1",
     "expo-auth-session": "~5.5.2",
     "expo-av": "^14.0.5",

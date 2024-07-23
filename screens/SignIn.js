@@ -20,10 +20,9 @@ export default function SignIn({ promptAsync }) {
             alt="App Logo"
             resizeMode="contain"
             style={styles.headerImg}
-            source={{
-              uri: "https://assets.withfra.me/SignIn.2.png",
-            }}
+            source={require("../assets/icon.png")}
           />
+
           <Text style={styles.title}>Sign in to</Text>
           <Text style={styles.title}>
             <Text style={{ color: "#075eec" }}> Alcademy Assist</Text>
@@ -77,8 +76,8 @@ const styles = StyleSheet.create({
     marginVertical: 36,
   },
   headerImg: {
-    width: 80,
-    height: 80,
+    width: 120,
+    height: 120,
     alignSelf: "center",
     marginBottom: 36,
   },

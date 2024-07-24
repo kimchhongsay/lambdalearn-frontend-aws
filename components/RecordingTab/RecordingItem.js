@@ -73,14 +73,14 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   subjectText: {
-    color: "#8b8b8b",
+    color: "#000000",
     fontSize: 16,
     fontWeight: "400",
     textDecorationLine: "underline",
     paddingTop: 8,
     paddingHorizontal: 16,
     paddingBottom: 8,
-    backgroundColor: "#ececec",
+    backgroundColor: "#96C9F4",
   },
   listItemContainer: {
     flexDirection: "row",

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
@@ -12,9 +12,11 @@ import { signOut } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth } from "../firebaseConfig";
 import * as FileSystem from "expo-file-system";
+import { MyContext } from "../hooks/MyContext";
 
-const Sidebar = ({ navigation, setUserInfo, clearData }) => {
+const Sidebar = ({ navigation, setUserInfo }) => {
   const [refreshing, setRefreshing] = useState(false);
+  const { incrementRefreshKey } = useContext(MyContext);
 
   const handleSignOut = async () => {
     try {
@@ -105,12 +107,12 @@ const Sidebar = ({ navigation, setUserInfo, clearData }) => {
               console.log(
                 "All audio records and metadata deleted successfully"
               );
-              clearData();
-              setRefreshing(false);
+              incrementRefreshKey(); // Call this to refresh context and affected components
+              setRefreshing(false); // Ensure this is called after data is cleared
               Alert.alert("Success", "All data has been cleared successfully.");
             } catch (error) {
               console.error("Error deleting data: ", error);
-              setRefreshing(false);
+              setRefreshing(false); // Ensure this is called even if an error occurs
               Alert.alert(
                 "Error",
                 "Failed to clear all data. Please try again."

@@ -1,5 +1,3 @@
-import { AntDesign, FontAwesome } from "@expo/vector-icons";
-import * as FileSystem from "expo-file-system";
 import React, { useEffect, useState, useContext } from "react";
 import {
   Dimensions,
@@ -9,18 +7,31 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { AntDesign, FontAwesome } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system";
 import NewRecord from "../RecordingTab/NewRecord";
 import RecordingItem from "../RecordingTab/RecordingItem";
 import { MyContext } from "../../hooks/MyContext";
+import { SortingOptions, sortRecordings } from "../assets/SortingOptions";
 
 const screenWidth = Dimensions.get("window").width;
 
 const RecordingHome = () => {
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const { refreshKey } = useContext(MyContext);
   const [isNewRecordModalVisible, setIsNewRecordModalVisible] = useState(false);
   const [recordings, setRecordings] = useState([]);
-  const [sortOption, setSortOption] = useState("default");
+  const [sortOption, setSortOption] = useState(SortingOptions.DATE); // Default sort by date
+  const [sortDirection, setSortDirection] = useState("desc"); // Default sort direction
   const { activeTopTab, setActiveTopTab } = useContext(MyContext);
+
+  const formatDuration = (durationInSeconds) => {
+    const hours = Math.floor(durationInSeconds / 3600);
+    const minutes = Math.floor((durationInSeconds % 3600) / 60);
+    const seconds = durationInSeconds % 60;
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  };
 
   const retrieveRecordings = async () => {
     try {
@@ -52,59 +63,33 @@ const RecordingHome = () => {
                 filePath,
               };
             } else {
-              // If metadata file doesn't exist, create a basic metadata object
-              const filename = file.split(".")[0];
-              const [subject, title, datetime] = filename.split("-");
-              return {
-                type: "userAudio",
-                subject: subject || "Unknown Subject",
-                title: title || "Untitled",
-                datetime: datetime
-                  ? datetime.replace(/_/g, ":")
-                  : new Date().toISOString(),
-                duration: 0, // We can't determine the duration without loading the file
-                filePath,
-              };
+              return { filePath, type: "unknown" };
             }
           } catch (error) {
-            console.error(`Error processing file ${file}:`, error);
-            // Return a basic metadata object if there's an error
-            return {
-              type: "userAudio",
-              subject: "Unknown Subject",
-              title: file,
-              datetime: new Date().toISOString(),
-              duration: 0,
-              filePath,
-            };
+            console.error("Failed to read metadata:", error);
+            return { filePath, type: "unknown" };
           }
         })
       );
 
-      const validRecordings = formattedRecordings.filter(
-        (recording) => recording !== null
+      // Sort recordings by default option
+      const sortedRecordings = sortRecordings(
+        formattedRecordings,
+        sortOption,
+        sortDirection
       );
-      setRecordings(validRecordings);
+
+      console.log("Sorted Recordings:", sortedRecordings); // Debug log
+
+      setRecordings(sortedRecordings);
     } catch (error) {
-      console.error("Error retrieving recordings:", error);
+      console.error("Failed to retrieve recordings:", error);
     }
-  };
-
-  const formatDuration = (durationInSeconds) => {
-    const hours = Math.floor(durationInSeconds / 3600);
-    const minutes = Math.floor((durationInSeconds % 3600) / 60);
-    const seconds = durationInSeconds % 60;
-
-    const formattedHours = hours.toString().padStart(2, "0");
-    const formattedMinutes = minutes.toString().padStart(2, "0");
-    const formattedSeconds = seconds.toString().padStart(2, "0");
-
-    return `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
   };
 
   useEffect(() => {
     retrieveRecordings();
-  }, []);
+  }, [sortOption, sortDirection]);
 
   const handlePressFloatingButton = () => {
     setIsNewRecordModalVisible(true);
@@ -116,62 +101,77 @@ const RecordingHome = () => {
   };
 
   const handleSortOption = (option) => {
-    setSortOption(option);
-    let sortedRecordings = [...recordings];
-    switch (option) {
-      case "default":
-        break;
-      case "subject":
-        sortedRecordings.sort((a, b) => a.subject.localeCompare(b.subject));
-        break;
-      case "title":
-        sortedRecordings.sort((a, b) => a.title.localeCompare(b.title));
-        break;
-      case "date":
-        sortedRecordings.sort(
-          (a, b) => new Date(b.datetime) - new Date(a.datetime)
-        );
-        break;
-      default:
-        break;
+    setSortOption((prevOption) => {
+      const newDirection =
+        prevOption === option
+          ? sortDirection === "asc"
+            ? "desc"
+            : "asc"
+          : "desc";
+
+      console.log(
+        `Setting sortOption: ${option}, sortDirection: ${newDirection}`
+      ); // Debug log
+      setSortDirection(newDirection);
+      return option;
+    });
+  };
+
+  const getSortArrow = () => {
+    if (sortDirection === "asc") {
+      return <AntDesign name="arrowup" size={18} color="#ffffff" />;
+    } else {
+      return <AntDesign name="arrowdown" size={18} color="#ffffff" />;
     }
-    setRecordings(sortedRecordings);
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} key={refreshKey}>
       <View style={styles.titleContainer}>
         <Text style={{ fontSize: 18, fontWeight: "bold", paddingVertical: 4 }}>
           Recording List
         </Text>
-        <TouchableOpacity onPress={() => setActiveTopTab("Summarizes")}>
-          <Text>
-            Sort By &nbsp;
-            <AntDesign name="caretdown" size={12} color="black" />
-          </Text>
-        </TouchableOpacity>
       </View>
 
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          marginBottom: 8,
-        }}>
+      <View style={styles.sortOptions}>
         <TouchableOpacity
-          style={{ padding: 5 }}
-          onPress={() => handleSortOption("subject")}>
-          <Text>Subject</Text>
+          style={styles.sortButton}
+          onPress={() => handleSortOption(SortingOptions.SUBJECT)}>
+          <Text
+            style={
+              sortOption === SortingOptions.SUBJECT
+                ? styles.activeSortText
+                : styles.sortText
+            }>
+            Subject
+            {sortOption === SortingOptions.SUBJECT && getSortArrow()}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={{ padding: 5 }}
-          onPress={() => handleSortOption("title")}>
-          <Text>Title</Text>
+          style={styles.sortButton}
+          onPress={() => handleSortOption(SortingOptions.TITLE)}>
+          <Text
+            style={
+              sortOption === SortingOptions.TITLE
+                ? styles.activeSortText
+                : styles.sortText
+            }>
+            Title
+            {sortOption === SortingOptions.TITLE && getSortArrow()}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={{ padding: 5 }}
-          onPress={() => handleSortOption("date")}>
-          <Text>Date</Text>
+          style={styles.sortButton}
+          onPress={() => handleSortOption(SortingOptions.DATE)}>
+          <Text
+            style={
+              sortOption === SortingOptions.DATE
+                ? styles.activeSortText
+                : styles.sortText
+            }>
+            Date
+            {sortOption === SortingOptions.DATE && getSortArrow()}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -219,6 +219,32 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+  },
+  sortOptions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    backgroundColor: "#f3f3f37b",
+    marginBottom: 8,
+    borderRadius: 8,
+  },
+  sortButton: {
+    flex: 1,
+    padding: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sortText: {
+    fontSize: 16,
+  },
+  activeSortText: {
+    flex: 1,
+    fontSize: 16,
+    padding: 8,
+    borderRadius: 8,
+    fontWeight: "bold",
+    color: "#ffffff",
+    backgroundColor: "#4793AF",
   },
   importFileButton: {
     width: 46,

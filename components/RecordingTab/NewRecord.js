@@ -127,8 +127,20 @@ const NewRecord = ({ visible, onClose }) => {
     return `${sanitizedSubject}-${sanitizedTitle}-${datetime}.mp3`;
   };
 
+  const formatDateTime = (date) => {
+    const pad = (num) => String(num).padStart(2, "0");
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    const seconds = pad(date.getSeconds());
+
+    return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+  };
+
   const saveRecordedFile = async (sourceUri) => {
-    const datetime = new Date().toISOString().replace(/[:.]/g, "-");
+    const datetime = formatDateTime(new Date());
     const subjectToSave =
       selectedSubject === "Other" ? otherSubject : selectedSubject;
     const filename = generateFilename(subjectToSave, recordName, datetime);
@@ -193,7 +205,7 @@ const NewRecord = ({ visible, onClose }) => {
       return;
     }
 
-    const datetime = new Date().toISOString().replace(/[:.]/g, "-");
+    const datetime = formatDateTime(new Date());
     const subjectToSave =
       selectedSubject === "Other" ? otherSubject : selectedSubject;
     const filename = generateFilename(subjectToSave, recordName, datetime);

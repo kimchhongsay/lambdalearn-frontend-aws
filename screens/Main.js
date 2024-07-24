@@ -1,6 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import {
-  DrawerLayoutAndroid,
   Image,
   ScrollView,
   StatusBar,
@@ -13,16 +12,15 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import BottomTabs from "../components/BottomTabs";
 import DynamicBody from "../components/DynamicBody";
-import Sidebar from "../components/Sidebar";
 import TabButton from "../components/TabButton";
 import { MyContext } from "../hooks/MyContext";
 
-const Main = ({ setUserInfo, userInfo }) => {
+const Main = ({ navigation, route }) => {
   const { activeTopTab, setActiveTopTab } = useContext(MyContext);
+  const userInfo = route.params.userInfo; // Access userInfo from route
 
   const [activeBottomTab, setActiveBottomTab] = useState("Recording");
   const [refreshKey, setRefreshKey] = useState(0);
-  const drawer = useRef(null);
 
   const topTabs = {
     Recording: ["Home", "Summaries", "Academic Summaries"],
@@ -57,63 +55,49 @@ const Main = ({ setUserInfo, userInfo }) => {
 
   useEffect(() => {});
   return (
-    <DrawerLayoutAndroid
-      key={refreshKey} // Use refreshKey to force re-render
-      ref={drawer}
-      drawerWidth={300}
-      drawerPosition="right"
-      renderNavigationView={() => (
-        <Sidebar
-          drawer={drawer}
-          clearData={clearData}
-          setUserInfo={setUserInfo}
-        />
-      )}>
-      <StatusBar backgroundColor="#f0f4f8" barStyle="dark-content" />
-      <View style={styles.container}>
-        <View style={styles.header}>
-          {userInfo?.photoURL && (
-            <Image
-              source={{ uri: userInfo.photoURL }}
-              style={styles.profileImage}
-            />
-          )}
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{userInfo?.displayName}</Text>
-            <Text style={styles.userEmail}>{userInfo?.email}</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.menuIcon}
-            onPress={() => drawer.current.openDrawer()}>
-            <MaterialIcons name="menu" size={24} color="black" />
-          </TouchableOpacity>
-        </View>
-        <TextInput style={styles.searchBar} placeholder="Search here" />
-        <View style={styles.tabContainerWrapper}>
-          <ScrollView horizontal={true} style={styles.tabContainer}>
-            {topTabs[activeBottomTab].map((tab) => (
-              <TabButton
-                key={tab}
-                title={tab}
-                isActive={activeTopTab === tab}
-                onPress={() => setActiveTopTab(tab)}
-              />
-            ))}
-          </ScrollView>
-        </View>
-        <View style={styles.dynamicBodyContainer}>
-          <DynamicBody
-            activeTopTab={activeTopTab}
-            setActiveTopTab={setActiveTopTab}
+    <View style={styles.container} key={refreshKey}>
+      <View style={styles.header}>
+        {userInfo?.photoURL && (
+          <Image
+            source={{ uri: userInfo.photoURL }}
+            style={styles.profileImage}
           />
+        )}
+        <View style={styles.userInfo}>
+          <Text style={styles.userName}>{userInfo?.displayName}</Text>
+          <Text style={styles.userEmail}>{userInfo?.email}</Text>
         </View>
-        <BottomTabs
-          activeBottomTab={activeBottomTab}
-          setActiveBottomTab={handleBottomTabChange}
+        <TouchableOpacity
+          style={styles.menuIcon}
+          onPress={() => navigation.openDrawer()}>
+          <MaterialIcons name="menu" size={24} color="black" />
+        </TouchableOpacity>
+      </View>
+      <TextInput style={styles.searchBar} placeholder="Search here" />
+      <View style={styles.tabContainerWrapper}>
+        <ScrollView horizontal={true} style={styles.tabContainer}>
+          {topTabs[activeBottomTab].map((tab) => (
+            <TabButton
+              key={tab}
+              title={tab}
+              isActive={activeTopTab === tab}
+              onPress={() => setActiveTopTab(tab)}
+            />
+          ))}
+        </ScrollView>
+      </View>
+      <View style={styles.dynamicBodyContainer}>
+        <DynamicBody
+          activeTopTab={activeTopTab}
           setActiveTopTab={setActiveTopTab}
         />
       </View>
-    </DrawerLayoutAndroid>
+      <BottomTabs
+        activeBottomTab={activeBottomTab}
+        setActiveBottomTab={handleBottomTabChange}
+        setActiveTopTab={setActiveTopTab}
+      />
+    </View>
   );
 };
 

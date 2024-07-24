@@ -11,10 +11,6 @@ import {
 import { auth } from "./firebaseConfig";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Main from "./screens/Main";
-import MyProvider from "./hooks/MyContext";
-import { NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import RecordedSummarizeData from "./screens/RecordedSummarizeData";
 
 // Ensure react-native-safe-area-context is installed
@@ -24,17 +20,39 @@ import "react-native-safe-area-context";
 import { enableScreens } from "react-native-screens";
 enableScreens();
 
-const Stack = createNativeStackNavigator();
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createDrawerNavigator } from "@react-navigation/drawer";
 
-WebBrowser.maybeCompleteAuthSession();
+import Main from "./screens/Main";
+import Sidebar from "./components/Sidebar";
+import MyProvider from "./hooks/MyContext";
+
+const Stack = createNativeStackNavigator();
+const Drawer = createDrawerNavigator();
 
 const firestore = getFirestore();
 
-const MainScreen = ({ setUserInfo, userInfo }) => (
-  <MyProvider>
-    <Main setUserInfo={setUserInfo} userInfo={userInfo} />
-  </MyProvider>
-);
+WebBrowser.maybeCompleteAuthSession();
+
+function MainStack({ userInfo }) {
+  // Pass userInfo to MainStack
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="Main"
+        component={Main}
+        initialParams={{ userInfo }} // Pass userInfo to Main
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="RecordedSummarizeData"
+        component={RecordedSummarizeData}
+        options={{ title: "Record Details & Summary" }}
+      />
+    </Stack.Navigator>
+  );
+}
 
 export default function App() {
   const [userInfo, setUserInfo] = React.useState(null);
@@ -99,6 +117,11 @@ export default function App() {
     return () => unsub();
   }, []);
 
+  const clearData = () => {
+    // Add any data clearing logic you need here
+    console.log("Clearing data...");
+  };
+
   if (loading)
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -108,39 +131,29 @@ export default function App() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator>
-        {userInfo ? (
-          <>
-            <Stack.Screen name="Main" options={{ headerShown: false }}>
-              {(props) => (
-                <MainScreen
-                  {...props}
-                  setUserInfo={setUserInfo}
-                  userInfo={userInfo}
-                />
-              )}
-            </Stack.Screen>
-            <Stack.Screen
-              name="RecordedSummarizeData"
-              component={RecordedSummarizeData}
-              options={{ title: "Record Details & Summary" }}
-              // options={{ headerShown: false }}
-            />
-          </>
-        ) : (
+      {userInfo ? (
+        <MyProvider>
+          <Drawer.Navigator
+            drawerContent={(props) => (
+              <Sidebar
+                {...props}
+                setUserInfo={setUserInfo}
+                clearData={clearData}
+              />
+            )}>
+            <Drawer.Screen name="Home" options={{ headerShown: false }}>
+              {/* Pass userInfo to MainStack */}
+              {(props) => <MainStack {...props} userInfo={userInfo} />}
+            </Drawer.Screen>
+          </Drawer.Navigator>
+        </MyProvider>
+      ) : (
+        <Stack.Navigator>
           <Stack.Screen name="SignIn" options={{ headerShown: false }}>
             {(props) => <SignIn {...props} promptAsync={promptAsync} />}
           </Stack.Screen>
-        )}
-      </Stack.Navigator>
+        </Stack.Navigator>
+      )}
     </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

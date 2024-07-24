@@ -18,8 +18,7 @@ import HTML from "react-native-render-html";
 import { MaterialIcons } from "@expo/vector-icons";
 import Share from "react-native-share";
 import * as FileSystem from "expo-file-system";
-
-import htmlDocx from "html-docx-js/dist/html-docx";
+import RNHTMLtoPDF from "react-native-html-to-pdf";
 
 const SERVER_URL = "https://b1e1-223-205-240-59.ngrok-free.app";
 
@@ -355,38 +354,36 @@ const RecordedSummarizeData = ({ route, navigation }) => {
   };
 
   const shareSummarizedText = async (language) => {
-    const removeHtmlTags = (text) => {
-      const regex = /(<([^>]+)>)/gi;
-      return text.replace(regex, "");
+    const removeHtmlTags = (htmlString) => {
+      return htmlString.replace(/<\/?[^>]+>/gi, "");
     };
-
-    // const formatAsDocs = (text) => {
-    //   const lines = text.split("\n");
-    //   const formattedLines = lines.map((line) => `• ${line.trim()}`); // Use bullet point
-    //   return formattedLines.join("\n");
-    // };
 
     try {
       const textToShare = state.summarizedTexts[language];
-      const plainText = removeHtmlTags(textToShare);
-      // const formattedText = formatAsDocs(plainText);
 
-      const fileName = `summarizedText_${language}.txt`;
-      const fileUri = FileSystem.documentDirectory + fileName;
+      // --- Generate PDF ---
+      const options = {
+        html: textToShare,
+        fileName: `summarizedText_${language}`,
+        directory: "Documents", // Optional directory
+      };
 
-      await FileSystem.writeAsStringAsync(fileUri, plainText);
+      const file = await RNHTMLtoPDF.convert(options);
 
+      // --- Share the PDF ---
       const shareOptions = {
-        title: `Summarized Text (${language}), Subject: ${subject} Date: ${datetime}`,
-        url: fileUri,
-        type: "text/plain",
-        subject: `Summarized Text (${language}); Subject: ${subject}; Date: ${datetime}`,
+        title: `Summarized Text [${language}], Subject: ${subject} Date: ${datetime}`,
+        url: `file://${file.filePath}`, // Ensure 'file://' prefix
+        type: "application/pdf",
+        subject: `Summarized Text [${language}]; Subject: ${subject}; Date: ${datetime}`,
+        message: removeHtmlTags(textToShare),
       };
 
       await Share.open(shareOptions);
       alert("Summarized text shared successfully!");
     } catch (error) {
       console.error("Error sharing summarized text:", error);
+      alert(`Error sharing summarized text: ${error.message}`);
     }
   };
 

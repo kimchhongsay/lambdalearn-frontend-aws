@@ -8,6 +8,7 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { Audio } from "expo-av";
 import axios from "axios";
@@ -18,7 +19,9 @@ import { MaterialIcons } from "@expo/vector-icons";
 import Share from "react-native-share";
 import * as FileSystem from "expo-file-system";
 
-const SERVER_URL = "https://7758-124-122-14-119.ngrok-free.app";
+import htmlDocx from "html-docx-js/dist/html-docx";
+
+const SERVER_URL = "https://b1e1-223-205-240-59.ngrok-free.app";
 
 const summarizeLanguageOption = [
   { value: "Default", label: "Default" },
@@ -31,6 +34,9 @@ const summarizeLanguageOption = [
 
 const RecordedSummarizeData = ({ route, navigation }) => {
   const { subject, title, duration, datetime, filePath } = route.params;
+
+  // Get window width using useWindowDimensions
+  const { width: windowWidth } = useWindowDimensions();
 
   const [state, setState] = useState({
     sound: null,
@@ -206,52 +212,81 @@ const RecordedSummarizeData = ({ route, navigation }) => {
       ...prevState,
       loadingSummarize: true,
       error: null,
+      // Clear previous summaries when starting a new summarization
+      summarizedTexts: {},
     }));
 
     const transcript = state.transcript || (await transcriptAudio());
     console.log("Sending transcript for summarization: ", transcript);
 
-    for (let i = 0; i < state.selectedSummarizeLanguage.length; i++) {
-      try {
-        const language = state.selectedSummarizeLanguage[i];
-        const response = await axios.post(SERVER_URL + "/summarize/", {
-          transcript: transcript,
-          language: language,
-        });
+    try {
+      // Purge the transcript first
+      const purgeResponse = await axios.post(SERVER_URL + "/purge/", {
+        transcript: transcript,
+        language: "The same language format as input",
+      });
 
-        const { transcribe_summarize } = response.data;
+      const purgedTranscript = purgeResponse.data.purged_transcript;
+      console.log("Purged Transcript Result: ", purgedTranscript);
 
-        // Store the summarized text for the specific language
-        setState((prevState) => ({
-          ...prevState,
-          summarizedTexts: {
-            ...prevState.summarizedTexts,
-            [language]: transcribe_summarize,
-          },
-          isEditingSummarizedText: {
-            ...prevState.isEditingSummarizedText,
-            [language]: false,
-          },
-        }));
-
-        await AsyncStorage.setItem(
-          `${filePath}_summarized_${language}`,
-          transcribe_summarize
+      // Iterate through each selected language for summarization
+      for (let i = 0; i < state.selectedSummarizeLanguages.length; i++) {
+        console.log(
+          "Summarizing for language: ",
+          state.selectedSummarizeLanguages[i]
         );
-      } catch (error) {
-        console.error(
-          "Error during summarization:",
-          error.response ? error.response.data : error.message
-        );
-        // Handle the error for the specific language (e.g., display an error message)
-        setState((prevState) => ({
-          ...prevState,
-          error: `Error summarizing transcript for ${language}: ${error.message}`,
-        }));
+        const language = state.selectedSummarizeLanguages[i];
+        try {
+          const response = await axios.post(SERVER_URL + "/summarize/", {
+            purged_transcript: purgedTranscript, // Change "transcript" to "purged_transcript"
+            language: language,
+          });
+          const { transcribe_summarize } = response.data;
+
+          // Store the summarized text for the specific language
+          setState((prevState) => ({
+            ...prevState,
+            summarizedTexts: {
+              ...prevState.summarizedTexts,
+              [language]: transcribe_summarize,
+            },
+            isEditingSummarizedText: {
+              ...prevState.isEditingSummarizedText,
+              [language]: false,
+            },
+          }));
+
+          // Save the summarized text in AsyncStorage
+          await AsyncStorage.setItem(
+            `${filePath}_summarized_${language}`,
+            transcribe_summarize
+          );
+        } catch (error) {
+          console.error(
+            `Error during summarization for ${language}:`,
+            error.response ? error.response.data : error.message
+          );
+          setState((prevState) => ({
+            ...prevState,
+            error: `Error summarizing transcript for ${language}: ${error.message}`,
+          }));
+        }
       }
+    } catch (error) {
+      console.error(
+        "Error during purging:",
+        error.response ? error.response.data : error.message
+      );
+      setState((prevState) => ({
+        ...prevState,
+        error: `Error purging transcript: ${error.message}`,
+      }));
     }
 
-    setState((prevState) => ({ ...prevState, loadingSummarize: false }));
+    setState((prevState) => ({
+      ...prevState,
+      loadingSummarize: false,
+    }));
   };
 
   const saveEditedTranscript = async () => {
@@ -320,14 +355,26 @@ const RecordedSummarizeData = ({ route, navigation }) => {
   };
 
   const shareSummarizedText = async (language) => {
-    const fileName = `summarizedText_${language}.txt`;
-    const fileUri = FileSystem.documentDirectory + fileName;
+    const removeHtmlTags = (text) => {
+      const regex = /(<([^>]+)>)/gi;
+      return text.replace(regex, "");
+    };
+
+    // const formatAsDocs = (text) => {
+    //   const lines = text.split("\n");
+    //   const formattedLines = lines.map((line) => `• ${line.trim()}`); // Use bullet point
+    //   return formattedLines.join("\n");
+    // };
 
     try {
-      await FileSystem.writeAsStringAsync(
-        fileUri,
-        state.summarizedTexts[language]
-      );
+      const textToShare = state.summarizedTexts[language];
+      const plainText = removeHtmlTags(textToShare);
+      // const formattedText = formatAsDocs(plainText);
+
+      const fileName = `summarizedText_${language}.txt`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+
+      await FileSystem.writeAsStringAsync(fileUri, plainText);
 
       const shareOptions = {
         title: `Summarized Text (${language}), Subject: ${subject} Date: ${datetime}`,
@@ -436,79 +483,11 @@ const RecordedSummarizeData = ({ route, navigation }) => {
           onSelect={(value) =>
             setState((prevState) => ({
               ...prevState,
-              selectedSummarizeLanguage: value,
+              selectedSummarizeLanguages: value,
             }))
           }
-          defaultValue={state.selectedSummarizeLanguage}
+          defaultValue={state.selectedSummarizeLanguages[0]}
         />
-        {/* <View style={styles.summarizeContainer}>
-          <Text style={styles.heading}>Summarized Text:</Text>
-          <TouchableOpacity
-            onPress={summarizeTranscript}
-            style={styles.actionButton}>
-            {state.loadingSummarize ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text style={styles.actionButtonText}>Summarize Transcript</Text>
-            )}
-          </TouchableOpacity>
-          {state.summarizedText && (
-            <View>
-              {state.isEditingSummarizedText ? (
-                <View>
-                  <TextInput
-                    style={styles.input}
-                    value={state.editableSummarizedText}
-                    onChangeText={(text) =>
-                      setState((prevState) => ({
-                        ...prevState,
-                        editableSummarizedText: text,
-                      }))
-                    }
-                    multiline
-                  />
-                  <View style={styles.buttonContainer}>
-                    <TouchableOpacity
-                      onPress={saveEditedSummarizedText}
-                      style={[styles.button, styles.saveButton]}>
-                      <Text style={styles.buttonText}>Save Summary</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={cancelSummarizeEdit}
-                      style={[styles.button, styles.cancelButton]}>
-                      <Text style={styles.buttonText}>Cancel</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ) : (
-                <View>
-                  <View style={styles.summarizeButtonContainer}>
-                    <TouchableOpacity
-                      onPress={() =>
-                        setState((prevState) => ({
-                          ...prevState,
-                          isEditingSummarizedText: true,
-                        }))
-                      }
-                      style={styles.editButton}>
-                      <Text>Edit</Text>
-                      <MaterialIcons name="edit" size={20} color="#2196F3" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.editButton}
-                      onPress={shareSummarizedText}>
-                      <Text>Share</Text>
-                      <MaterialIcons name="share" size={20} color="#2196F3" />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.textContainer}>
-                    <HTML source={{ html: state.summarizedText }} />
-                  </View>
-                </View>
-              )}
-            </View>
-          )}
-        </View> */}
         <View style={styles.summarizeContainer}>
           <Text style={styles.heading}>Summarized Text:</Text>
           <TouchableOpacity
@@ -524,7 +503,6 @@ const RecordedSummarizeData = ({ route, navigation }) => {
           {Object.entries(state.summarizedTexts).map(
             ([language, summarizedText]) => (
               <View key={language} style={styles.languageSummaryContainer}>
-                <Text style={styles.languageHeading}>{language}:</Text>
                 {state.isEditingSummarizedText[language] ? (
                   <View>
                     <TextInput
@@ -557,29 +535,51 @@ const RecordedSummarizeData = ({ route, navigation }) => {
                 ) : (
                   <View>
                     <View style={styles.summarizeButtonContainer}>
+                      <Text
+                        style={{
+                          flex: 1,
+                          fontSize: 16,
+                          textDecorationLine: "underline",
+                        }}>
+                        Language:{" "}
+                        <Text style={{ fontWeight: "bold" }}>{language}</Text>
+                      </Text>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "flex-end",
+                        }}>
+                        <TouchableOpacity
+                          onPress={() =>
+                            setState((prevState) => ({
+                              ...prevState,
+                              isEditingSummarizedText: {
+                                ...prevState.isEditingSummarizedText,
+                                [language]: true,
+                              },
+                            }))
+                          }
+                          style={styles.editButton}>
+                          <Text style={styles.editButtonText}>Edit</Text>
+                          <MaterialIcons
+                            name="edit"
+                            size={20}
+                            color="#ffffff"
+                          />
+                        </TouchableOpacity>
+                      </View>
                       <TouchableOpacity
-                        onPress={() =>
-                          setState((prevState) => ({
-                            ...prevState,
-                            isEditingSummarizedText: {
-                              ...prevState.isEditingSummarizedText,
-                              [language]: true,
-                            },
-                          }))
-                        }
-                        style={styles.editButton}>
-                        <Text>Edit</Text>
-                        <MaterialIcons name="edit" size={20} color="#2196F3" />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.editButton}
+                        style={styles.shareButton}
                         onPress={() => shareSummarizedText(language)}>
-                        <Text>Share</Text>
-                        <MaterialIcons name="share" size={20} color="#2196F3" />
+                        <Text style={styles.shareButtonText}>Share</Text>
+                        <MaterialIcons name="share" size={20} color="#ffffff" />
                       </TouchableOpacity>
                     </View>
                     <View style={styles.textContainer}>
-                      <HTML source={{ html: summarizedText }} />
+                      <HTML
+                        source={{ html: summarizedText }}
+                        contentWidth={windowWidth}
+                      />
                     </View>
                   </View>
                 )}
@@ -597,8 +597,9 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   summarizeButtonContainer: {
+    marginTop: 20,
     flexDirection: "row",
-    justifyContent: "flex-end",
+    alignItems: "center",
   },
   button: {
     backgroundColor: "#4CAF50",
@@ -650,7 +651,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     alignSelf: "flex-end",
     alignItems: "center",
-    backgroundColor: "#e9e9e9",
+    backgroundColor: "#25cd49",
+  },
+  editButtonText: {
+    color: "#ffffff",
+  },
+  shareButton: {
+    marginLeft: 1,
+    flexDirection: "row",
+    marginTop: 5,
+    paddingTop: 5,
+    borderWidth: 1,
+    borderColor: "#a8a8a8",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    alignSelf: "flex-end",
+    alignItems: "center",
+    backgroundColor: "#2595cd",
+  },
+  shareButtonText: {
+    color: "#ffffff",
   },
   transcriptContainer: {
     marginTop: 20,

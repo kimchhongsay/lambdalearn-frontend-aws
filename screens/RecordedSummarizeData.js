@@ -20,14 +20,14 @@ import Share from "react-native-share";
 import * as FileSystem from "expo-file-system";
 import RNHTMLtoPDF from "react-native-html-to-pdf";
 
-const SERVER_URL = "https://b1e1-223-205-240-59.ngrok-free.app";
+const SERVER_URL = "https://f7b5-223-205-240-59.ngrok-free.app";
 
 const summarizeLanguageOption = [
   { value: "Default", label: "Default" },
   { value: "English", label: "English" },
   { value: "Thai", label: "Thai" },
-  { value: "Khmer", label: "Khmer" },
   { value: "French", label: "French" },
+  { value: "Khmer", label: "Khmer" },
   // Add more languages as needed
 ];
 
@@ -46,9 +46,9 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     loadingTranscript: false,
     loadingSummarize: false,
     isEditingTranscript: false,
-    summarizedTexts: {}, // Store summaries for each language
-    isEditingSummarizedText: {}, // Track editing state for each language
-    selectedSummarizeLanguages: [],
+    summarizedTexts: {},
+    isEditingSummarizedText: {},
+    selectedSummarizeLanguages: ["Default"],
     showFullTranscript: false,
   });
   useEffect(() => {
@@ -342,8 +342,33 @@ const RecordedSummarizeData = ({ route, navigation }) => {
   const handleSummarizeLanguageSelect = (selectedLanguages) => {
     setState((prevState) => ({
       ...prevState,
-      selectedSummarizeLanguages: selectedLanguages,
+      selectedSummarizeLanguages: selectedLanguages, // <-- Update the array of selected languages
     }));
+  };
+
+  const deleteSummarizedText = async (language) => {
+    try {
+      // 1. Remove from AsyncStorage
+      await AsyncStorage.removeItem(`${filePath}_summarized_${language}`);
+
+      // 2. Update the state to reflect the deletion
+      setState((prevState) => {
+        const updatedSummaries = { ...prevState.summarizedTexts };
+        delete updatedSummaries[language];
+        return {
+          ...prevState,
+          summarizedTexts: updatedSummaries,
+        };
+      });
+
+      Alert.alert("Success", "Summarized text deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting summarized text:", error);
+      Alert.alert(
+        "Error",
+        `Failed to delete summarized text: ${error.message}`
+      );
+    }
   };
 
   const toggleShowFullTranscript = () => {
@@ -452,8 +477,8 @@ const RecordedSummarizeData = ({ route, navigation }) => {
                       }))
                     }
                     style={styles.editButton}>
-                    <Text>Edit</Text>
-                    <MaterialIcons name="edit" size={20} color="#2196F3" />
+                    <Text style={styles.editButtonText}>Edit</Text>
+                    <MaterialIcons name="edit" size={20} color="#ffffff" />
                   </TouchableOpacity>
                   <Text
                     style={styles.textContainer}
@@ -477,13 +502,8 @@ const RecordedSummarizeData = ({ route, navigation }) => {
         <Text style={styles.heading}>Optional language for summarization:</Text>
         <DropdownPicker
           options={summarizeLanguageOption}
-          onSelect={(value) =>
-            setState((prevState) => ({
-              ...prevState,
-              selectedSummarizeLanguages: value,
-            }))
-          }
-          defaultValue={state.selectedSummarizeLanguages[0]}
+          onSelect={handleSummarizeLanguageSelect}
+          defaultValue={state.selectedSummarizeLanguages}
         />
         <View style={styles.summarizeContainer}>
           <Text style={styles.heading}>Summarized Text:</Text>
@@ -530,17 +550,17 @@ const RecordedSummarizeData = ({ route, navigation }) => {
                     </View>
                   </View>
                 ) : (
-                  <View>
+                  <View style={{ marginTop: 20 }}>
+                    <Text
+                      style={{
+                        flex: 1,
+                        fontSize: 16,
+                        textDecorationLine: "underline",
+                      }}>
+                      Language:{" "}
+                      <Text style={{ fontWeight: "bold" }}>{language}</Text>
+                    </Text>
                     <View style={styles.summarizeButtonContainer}>
-                      <Text
-                        style={{
-                          flex: 1,
-                          fontSize: 16,
-                          textDecorationLine: "underline",
-                        }}>
-                        Language:{" "}
-                        <Text style={{ fontWeight: "bold" }}>{language}</Text>
-                      </Text>
                       <View
                         style={{
                           flexDirection: "row",
@@ -560,6 +580,18 @@ const RecordedSummarizeData = ({ route, navigation }) => {
                           <Text style={styles.editButtonText}>Edit</Text>
                           <MaterialIcons
                             name="edit"
+                            size={20}
+                            color="#ffffff"
+                          />
+                        </TouchableOpacity>
+                      </View>
+                      <View>
+                        <TouchableOpacity
+                          style={styles.deleteButton}
+                          onPress={() => deleteSummarizedText(language)}>
+                          <Text style={styles.deleteButtonText}>Delete</Text>
+                          <MaterialIcons
+                            name="delete"
                             size={20}
                             color="#ffffff"
                           />
@@ -594,9 +626,10 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   summarizeButtonContainer: {
-    marginTop: 20,
+    marginTop: 10,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "flex-end",
   },
   button: {
     backgroundColor: "#4CAF50",
@@ -648,9 +681,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     alignSelf: "flex-end",
     alignItems: "center",
-    backgroundColor: "#25cd49",
+    backgroundColor: "#cdab25",
   },
+  deleteButton: {
+    flexDirection: "row",
+    marginTop: 5,
+    paddingTop: 5,
+    borderWidth: 1,
+    borderColor: "#a8a8a8",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    alignSelf: "flex-end",
+    alignItems: "center",
+    backgroundColor: "#cd2525",
+  },
+
   editButtonText: {
+    color: "#ffffff",
+  },
+  deleteButtonText: {
     color: "#ffffff",
   },
   shareButton: {

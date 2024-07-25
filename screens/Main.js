@@ -108,6 +108,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f0f4f8",
     padding: 16,
+    marginTop: StatusBar.currentHeight || 0,
   },
   header: {
     flexDirection: "row",

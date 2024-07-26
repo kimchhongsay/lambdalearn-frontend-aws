@@ -20,7 +20,7 @@ import Share from "react-native-share";
 import * as FileSystem from "expo-file-system";
 import RNHTMLtoPDF from "react-native-html-to-pdf";
 
-const SERVER_URL = "https://1b54-124-122-14-119.ngrok-free.app";
+const SERVER_URL = "https://2e26-223-205-240-59.ngrok-free.app";
 
 const summarizeLanguageOption = [
   { value: "Default", label: "Default" },
@@ -216,48 +216,137 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     const transcript = state.transcript || (await transcriptAudio());
     console.log("Sending transcript for summarization: ", transcript);
 
+    // Check if the transcript has been purged before
+    let purgedTranscript = await AsyncStorage.getItem(`${filePath}_purged`);
+
     try {
-      // Purge the transcript first
-      const purgeResponse = await axios.post(SERVER_URL + "/purge/", {
-        transcript: transcript,
-        language: "The same language format as input",
-      });
+      if (!purgedTranscript) {
+        // Purge the transcript if it hasn't been done yet
+        console.log("Purging the transcript...");
+        const purgeResponse = await axios.post(SERVER_URL + "/purge/", {
+          transcript: transcript,
+          language: "The same language format as input",
+        });
 
-      const purgedTranscript = purgeResponse.data.purged_transcript;
-      console.log("Purged Transcript Result: ", purgedTranscript);
+        purgedTranscript = purgeResponse.data.purged_transcript;
+        console.log("Purged Transcript Result: ", purgedTranscript);
 
-      // Iterate through each selected language for summarization
+        // Store the purged transcript for future use
+        await AsyncStorage.setItem(`${filePath}_purged`, purgedTranscript);
+      } else {
+        console.log("Using previously purged transcript.");
+      }
+
+      // Summarize in selected languages
       for (let i = 0; i < state.selectedSummarizeLanguages.length; i++) {
-        console.log(
-          "Summarizing for language: ",
-          state.selectedSummarizeLanguages[i]
-        );
         const language = state.selectedSummarizeLanguages[i];
+        console.log("Summarizing for language: ", language);
+
         try {
-          const response = await axios.post(SERVER_URL + "/summarize/", {
-            purged_transcript: purgedTranscript, // Change "transcript" to "purged_transcript"
-            language: language,
-          });
-          const { transcribe_summarize } = response.data;
+          if (language === "Khmer") {
+            // Check if any summary exists
+            if (Object.values(state.summarizedTexts).length > 0) {
+              // Use the first available summary for translation
+              const existingSummary = Object.values(state.summarizedTexts)[0];
+              console.log(
+                "Using existing summary for Khmer translation:",
+                existingSummary
+              );
 
-          // Store the summarized text for the specific language
-          setState((prevState) => ({
-            ...prevState,
-            summarizedTexts: {
-              ...prevState.summarizedTexts,
-              [language]: transcribe_summarize,
-            },
-            isEditingSummarizedText: {
-              ...prevState.isEditingSummarizedText,
-              [language]: false,
-            },
-          }));
+              const translateResponse = await axios.post(
+                SERVER_URL + "/translate_to_khmer/",
+                {
+                  text: existingSummary,
+                }
+              );
+              const khmerSummary = translateResponse.data.translate_to_khmer;
 
-          // Save the summarized text in AsyncStorage
-          await AsyncStorage.setItem(
-            `${filePath}_summarized_${language}`,
-            transcribe_summarize
-          );
+              setState((prevState) => ({
+                ...prevState,
+                summarizedTexts: {
+                  ...prevState.summarizedTexts,
+                  ["Khmer"]: khmerSummary,
+                },
+                isEditingSummarizedText: {
+                  ...prevState.isEditingSummarizedText,
+                  ["Khmer"]: false,
+                },
+              }));
+
+              await AsyncStorage.setItem(
+                `${filePath}_summarized_Khmer`,
+                khmerSummary
+              );
+            } else {
+              // No summary exists, summarize in English first, then translate
+              console.log("Summarizing in English, then translating to Khmer");
+              const englishSummaryResponse = await axios.post(
+                SERVER_URL + "/summarize/",
+                {
+                  purged_transcript: purgedTranscript,
+                  language: "English",
+                }
+              );
+              const { transcribe_summarize: englishSummary } =
+                englishSummaryResponse.data;
+
+              const translateResponse = await axios.post(
+                SERVER_URL + "/translate_to_khmer/",
+                {
+                  text: englishSummary,
+                }
+              );
+              const khmerSummary = translateResponse.data.translate_to_khmer;
+
+              // Update state with both English and Khmer summaries
+              setState((prevState) => ({
+                ...prevState,
+                summarizedTexts: {
+                  ...prevState.summarizedTexts,
+                  ["English"]: englishSummary,
+                  ["Khmer"]: khmerSummary,
+                },
+                isEditingSummarizedText: {
+                  ...prevState.isEditingSummarizedText,
+                  ["English"]: false,
+                  ["Khmer"]: false,
+                },
+              }));
+
+              await AsyncStorage.setItem(
+                `${filePath}_summarized_English`,
+                englishSummary
+              );
+              await AsyncStorage.setItem(
+                `${filePath}_summarized_Khmer`,
+                khmerSummary
+              );
+            }
+          } else {
+            // For other languages, summarize directly
+            const response = await axios.post(SERVER_URL + "/summarize/", {
+              purged_transcript: purgedTranscript,
+              language: language,
+            });
+            const { transcribe_summarize } = response.data;
+
+            setState((prevState) => ({
+              ...prevState,
+              summarizedTexts: {
+                ...prevState.summarizedTexts,
+                [language]: transcribe_summarize,
+              },
+              isEditingSummarizedText: {
+                ...prevState.isEditingSummarizedText,
+                [language]: false,
+              },
+            }));
+
+            await AsyncStorage.setItem(
+              `${filePath}_summarized_${language}`,
+              transcribe_summarize
+            );
+          }
         } catch (error) {
           console.error(
             `Error during summarization for ${language}:`,
@@ -278,12 +367,12 @@ const RecordedSummarizeData = ({ route, navigation }) => {
         ...prevState,
         error: `Error purging transcript: ${error.message}`,
       }));
+    } finally {
+      setState((prevState) => ({
+        ...prevState,
+        loadingSummarize: false,
+      }));
     }
-
-    setState((prevState) => ({
-      ...prevState,
-      loadingSummarize: false,
-    }));
   };
 
   const saveEditedTranscript = async () => {
@@ -549,7 +638,7 @@ const RecordedSummarizeData = ({ route, navigation }) => {
                   </View>
                 ) : (
                   <View style={{ marginTop: 20 }}>
-                    <Text
+                    {/* <Text
                       style={{
                         flex: 1,
                         fontSize: 16,
@@ -607,7 +696,79 @@ const RecordedSummarizeData = ({ route, navigation }) => {
                         source={{ html: summarizedText }}
                         contentWidth={windowWidth}
                       />
-                    </View>
+                    </View> */}
+                    {/* Check for a valid summary before rendering HTML */}
+                    {state.summarizedTexts[language] !== undefined ? (
+                      <View style={{ marginTop: 20 }}>
+                        <Text
+                          style={{
+                            flex: 1,
+                            fontSize: 16,
+                            textDecorationLine: "underline",
+                          }}>
+                          Language:{" "}
+                          <Text style={{ fontWeight: "bold" }}>{language}</Text>
+                        </Text>
+                        <View style={styles.summarizeButtonContainer}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              justifyContent: "flex-end",
+                            }}>
+                            <TouchableOpacity
+                              onPress={() =>
+                                setState((prevState) => ({
+                                  ...prevState,
+                                  isEditingSummarizedText: {
+                                    ...prevState.isEditingSummarizedText,
+                                    [language]: true,
+                                  },
+                                }))
+                              }
+                              style={styles.editButton}>
+                              <Text style={styles.editButtonText}>Edit</Text>
+                              <MaterialIcons
+                                name="edit"
+                                size={20}
+                                color="#ffffff"
+                              />
+                            </TouchableOpacity>
+                          </View>
+                          <View>
+                            <TouchableOpacity
+                              style={styles.deleteButton}
+                              onPress={() => deleteSummarizedText(language)}>
+                              <Text style={styles.deleteButtonText}>
+                                Delete
+                              </Text>
+                              <MaterialIcons
+                                name="delete"
+                                size={20}
+                                color="#ffffff"
+                              />
+                            </TouchableOpacity>
+                          </View>
+                          <TouchableOpacity
+                            style={styles.shareButton}
+                            onPress={() => shareSummarizedText(language)}>
+                            <Text style={styles.shareButtonText}>Share</Text>
+                            <MaterialIcons
+                              name="share"
+                              size={20}
+                              color="#ffffff"
+                            />
+                          </TouchableOpacity>
+                        </View>
+                        <View style={styles.textContainer}>
+                          <HTML
+                            source={{ html: state.summarizedTexts[language] }}
+                            contentWidth={windowWidth}
+                          />
+                        </View>
+                      </View>
+                    ) : (
+                      <Text>No {language} summary available yet.</Text>
+                    )}
                   </View>
                 )}
               </View>

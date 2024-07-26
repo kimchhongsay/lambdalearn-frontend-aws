@@ -20,7 +20,7 @@ import Share from "react-native-share";
 import * as FileSystem from "expo-file-system";
 import RNHTMLtoPDF from "react-native-html-to-pdf";
 
-const SERVER_URL = "https://f7b5-223-205-240-59.ngrok-free.app";
+const SERVER_URL = "https://1b54-124-122-14-119.ngrok-free.app";
 
 const summarizeLanguageOption = [
   { value: "Default", label: "Default" },
@@ -211,8 +211,6 @@ const RecordedSummarizeData = ({ route, navigation }) => {
       ...prevState,
       loadingSummarize: true,
       error: null,
-      // Clear previous summaries when starting a new summarization
-      summarizedTexts: {},
     }));
 
     const transcript = state.transcript || (await transcriptAudio());

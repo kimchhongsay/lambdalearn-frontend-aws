@@ -20,7 +20,7 @@ import Share from "react-native-share";
 import * as FileSystem from "expo-file-system";
 import RNHTMLtoPDF from "react-native-html-to-pdf";
 
-const SERVER_URL = "https://2e26-223-205-240-59.ngrok-free.app";
+const SERVER_URL = "https://f075-202-29-20-74.ngrok-free.app";
 
 const summarizeLanguageOption = [
   { value: "Default", label: "Default" },
@@ -492,10 +492,10 @@ const RecordedSummarizeData = ({ route, navigation }) => {
       };
 
       await Share.open(shareOptions);
-      alert("Summarized text shared successfully!");
+      // alert("Summarized text shared successfully!");
     } catch (error) {
       console.error("Error sharing summarized text:", error);
-      alert(`Error sharing summarized text: ${error.message}`);
+      // alert(`Error sharing summarized text: ${error.message}`);
     }
   };
 

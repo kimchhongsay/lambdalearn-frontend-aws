@@ -38,7 +38,7 @@ const Main = ({ navigation, route }) => {
       if (userInfo?.email) {
         try {
           // Check if the user document already exists
-          const userDocRef = doc(db, "User", userInfo.email);
+          const userDocRef = doc(db, "Users", userInfo.email);
           const userDocSnap = await getDoc(userDocRef);
           setUserEmail(userInfo.email);
           if (!userDocSnap.exists()) {

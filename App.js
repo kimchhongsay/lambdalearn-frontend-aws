@@ -63,6 +63,7 @@ export default function App() {
     webClientId:
       "185963385145-or5p5ssmd5brp1e6377ms8dcilmhrn6n.apps.googleusercontent.com",
   });
+  const [refreshTrigger, setRefreshTrigger] = React.useState(0);
 
   const checkLocalUser = async () => {
     try {
@@ -118,8 +119,8 @@ export default function App() {
   }, []);
 
   const clearData = () => {
-    // Add any data clearing logic you need here
     console.log("Clearing data...");
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   if (loading)
@@ -142,8 +143,13 @@ export default function App() {
               />
             )}>
             <Drawer.Screen name="Home" options={{ headerShown: false }}>
-              {/* Pass userInfo to MainStack */}
-              {(props) => <MainStack {...props} userInfo={userInfo} />}
+              {(props) => (
+                <MainStack
+                  {...props}
+                  userInfo={userInfo}
+                  refreshTrigger={refreshTrigger}
+                />
+              )}
             </Drawer.Screen>
           </Drawer.Navigator>
         </MyProvider>

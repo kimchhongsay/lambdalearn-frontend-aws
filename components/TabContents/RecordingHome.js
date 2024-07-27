@@ -1,4 +1,6 @@
-import React, { useEffect, useState, useContext } from "react";
+import { AntDesign, FontAwesome } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system";
+import React, { useContext, useEffect, useState } from "react";
 import {
   Dimensions,
   ScrollView,
@@ -7,17 +9,15 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { AntDesign, FontAwesome } from "@expo/vector-icons";
-import * as FileSystem from "expo-file-system";
-import NewRecord from "../RecordingTab/NewRecord";
-import RecordingItem from "../RecordingTab/RecordingItem";
 import { MyContext } from "../../hooks/MyContext";
 import { SortingOptions, sortRecordings } from "../assets/SortingOptions";
+import NewRecord from "../RecordingTab/NewRecord";
+import RecordingItem from "../RecordingTab/RecordingItem";
 
 const screenWidth = Dimensions.get("window").width;
 
 const RecordingHome = () => {
-  const { refreshKey } = useContext(MyContext);
+  const { refreshKey, incrementRefreshKey, userEmail } = useContext(MyContext);
   const [isNewRecordModalVisible, setIsNewRecordModalVisible] = useState(false);
   const [recordings, setRecordings] = useState([]);
   const [sortOption, setSortOption] = useState(SortingOptions.DATE); // Default sort by date
@@ -37,12 +37,14 @@ const RecordingHome = () => {
     try {
       const dir = FileSystem.documentDirectory;
       const files = await FileSystem.readDirectoryAsync(dir);
+      const sanitizedEmail = userEmail.replace(/[@.]/g, "_");
+      // Correctly filter audio files
       const audioFiles = files.filter(
         (file) =>
-          file.endsWith(".mp3") ||
-          file.endsWith(".aac") ||
-          file.endsWith(".m4a") ||
-          file.endsWith(".wav")
+          (file.endsWith(".mp3") && file.includes(sanitizedEmail)) ||
+          (file.endsWith(".aac") && file.includes(sanitizedEmail)) ||
+          (file.endsWith(".m4a") && file.includes(sanitizedEmail)) ||
+          (file.endsWith(".wav") && file.includes(sanitizedEmail))
       );
 
       const formattedRecordings = await Promise.all(
@@ -79,8 +81,6 @@ const RecordingHome = () => {
         sortDirection
       );
 
-      console.log("Sorted Recordings:", sortedRecordings); // Debug log
-
       setRecordings(sortedRecordings);
     } catch (error) {
       console.error("Failed to retrieve recordings:", error);
@@ -108,10 +108,6 @@ const RecordingHome = () => {
             ? "desc"
             : "asc"
           : "desc";
-
-      console.log(
-        `Setting sortOption: ${option}, sortDirection: ${newDirection}`
-      ); // Debug log
       setSortDirection(newDirection);
       return option;
     });
@@ -119,9 +115,9 @@ const RecordingHome = () => {
 
   const getSortArrow = () => {
     if (sortDirection === "asc") {
-      return <AntDesign name="arrowup" size={18} color="#ffffff" />;
+      return <AntDesign name="arrowup" size={18} color="black" />;
     } else {
-      return <AntDesign name="arrowdown" size={18} color="#ffffff" />;
+      return <AntDesign name="arrowdown" size={18} color="black" />;
     }
   };
 
@@ -235,16 +231,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   sortText: {
-    fontSize: 16,
+    fontSize: 12,
   },
   activeSortText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     padding: 8,
     borderRadius: 8,
     fontWeight: "bold",
-    color: "#ffffff",
-    backgroundColor: "#4793AF",
+    color: "black",
   },
   importFileButton: {
     width: 46,

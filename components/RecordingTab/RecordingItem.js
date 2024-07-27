@@ -1,12 +1,50 @@
 import { FontAwesome, MaterialCommunityIcons } from "@expo/vector-icons";
-import React, { useContext } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { MyContext } from "../../hooks/MyContext";
 import { useNavigation } from "@react-navigation/native";
+import * as FileSystem from "expo-file-system";
+import React, { useContext, useState, useEffect } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Modal from "react-native-modal";
+import Share from "react-native-share";
+import { MyContext } from "../../hooks/MyContext";
 
 const RecordingItem = ({ subject, title, duration, datetime, filePath }) => {
-  const { setActiveTopTab, activeTopTab } = useContext(MyContext);
+  const { incrementRefreshKey } = useContext(MyContext);
   const navigation = useNavigation();
+  const [isModalVisible, setModalVisible] = useState(false);
+
+  const handleFileOption = async (option) => {
+    setModalVisible(false);
+
+    if (option === "Share") {
+      try {
+        await Share.open({
+          url: `file://${filePath}`,
+          type: "audio/mpeg",
+        });
+      } catch (error) {
+        console.error("Error sharing audio:", error);
+        Alert.alert("Error", `Failed to share audio: ${error.message}`);
+      }
+    } else if (option === "delete") {
+      try {
+        // Delete the audio file
+        await FileSystem.deleteAsync(filePath);
+
+        // Delete associated metadata file if it exists
+        const metadataPath = `${filePath}.meta`;
+        const metadataExists = await FileSystem.getInfoAsync(metadataPath);
+        if (metadataExists.exists) {
+          await FileSystem.deleteAsync(metadataPath);
+        }
+
+        // Update the refresh key to trigger a re-render of the list
+        incrementRefreshKey();
+      } catch (error) {
+        console.error("Error deleting recording:", error);
+        Alert.alert("Error", `Failed to delete recording: ${error.message}`);
+      }
+    }
+  };
 
   const handleClickRecordedItem = () => {
     navigation.navigate("RecordedSummarizeData", {
@@ -16,6 +54,10 @@ const RecordingItem = ({ subject, title, duration, datetime, filePath }) => {
       datetime,
       filePath,
     });
+  };
+
+  const toggleModal = () => {
+    setModalVisible(!isModalVisible);
   };
 
   return (
@@ -38,14 +80,39 @@ const RecordingItem = ({ subject, title, duration, datetime, filePath }) => {
               <Text style={styles.listItemDate}>{datetime}</Text>
             </View>
           </View>
-          <MaterialCommunityIcons
-            name="dots-horizontal"
-            size={24}
-            color="black"
-            style={styles.listItemMenu}
-          />
+          <TouchableOpacity onPress={toggleModal}>
+            <MaterialCommunityIcons
+              name="dots-horizontal"
+              size={24}
+              color="black"
+              style={styles.listItemMenu}
+            />
+          </TouchableOpacity>
         </TouchableOpacity>
       </View>
+
+      {/* Modal for File Options */}
+      <Modal isVisible={isModalVisible} onBackdropPress={toggleModal}>
+        <View style={styles.modalContainer}>
+          <TouchableOpacity
+            style={[styles.modalButton, styles.shareButton]}
+            onPress={() => handleFileOption("Share")}>
+            <Text style={styles.modalButtonText}>Share</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.modalButton, styles.deleteButton]}
+            onPress={() => handleFileOption("delete")}>
+            <Text style={styles.modalButtonText}>Delete</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.modalButton, styles.cancelButton]}
+            onPress={toggleModal}>
+            <Text style={styles.modalButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -114,5 +181,31 @@ const styles = StyleSheet.create({
   },
   listItemMenu: {
     marginLeft: 12,
+  },
+
+  // Modal Styles
+  modalContainer: {
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 8,
+  },
+  modalButton: {
+    padding: 12,
+    borderRadius: 5,
+    marginBottom: 10,
+    alignItems: "center",
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  shareButton: {
+    backgroundColor: "lightgreen",
+  },
+  deleteButton: {
+    backgroundColor: "lightcoral",
+  },
+  cancelButton: {
+    backgroundColor: "#eee",
   },
 });

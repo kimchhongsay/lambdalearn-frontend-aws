@@ -1,32 +1,31 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-  ScrollView,
-  TextInput,
-  Alert,
-  useWindowDimensions,
-} from "react-native";
-import { Audio } from "expo-av";
-import axios from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import DropdownPicker from "../components/assets/DropdownPicker";
-import HTML from "react-native-render-html";
 import { MaterialIcons } from "@expo/vector-icons";
-import Share from "react-native-share";
-import * as FileSystem from "expo-file-system";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { Audio } from "expo-av";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import RNHTMLtoPDF from "react-native-html-to-pdf";
+import HTML from "react-native-render-html";
+import Share from "react-native-share";
+import DropdownPicker from "../components/assets/DropdownPicker";
 
-const SERVER_URL = "https://ba3f-124-122-15-243.ngrok-free.app";
+const SERVER_URL = "https://118d-223-204-200-73.ngrok-free.app";
 
 const summarizeLanguageOption = [
-  { value: "English", label: "English" },
-  { value: "Thai", label: "Thai" },
-  { value: "French", label: "French" },
-  { value: "Khmer", label: "Khmer" },
+  { value: "*English", label: "English" },
+  { value: "*Thai", label: "Thai" },
+  { value: "*French", label: "French" },
+  { value: "*Khmer", label: "Khmer" },
   // Add more languages as needed
 ];
 
@@ -47,9 +46,18 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     isEditingTranscript: false,
     summarizedTexts: {},
     isEditingSummarizedText: {},
-    selectedSummarizeLanguages: ["English"],
+    selectedSummarizeLanguages: [],
     showFullTranscript: false,
   });
+
+  useEffect(() => {
+    // Set the default language to the first option in the dropdown
+    setState((prevState) => ({
+      ...prevState,
+      selectedSummarizeLanguages: [summarizeLanguageOption[0].value],
+    }));
+  }, []);
+
   useEffect(() => {
     const setupAudio = async () => {
       try {
@@ -534,7 +542,7 @@ const RecordedSummarizeData = ({ route, navigation }) => {
         <DropdownPicker
           options={summarizeLanguageOption}
           onSelect={handleSummarizeLanguageSelect}
-          defaultValue={state.selectedSummarizeLanguages.join("; ")}
+          defaultValue={state.selectedSummarizeLanguages}
         />
         <View style={styles.summarizeContainer}>
           <Text style={styles.heading}>Summarized Text:</Text>

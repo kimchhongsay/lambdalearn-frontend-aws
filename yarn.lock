@@ -2045,18 +2045,18 @@
     prompts "^2.4.2"
     semver "^7.5.2"
 
-"@react-native-firebase/app@^20.0.0":
-  version "20.1.0"
-  resolved "https://registry.yarnpkg.com/@react-native-firebase/app/-/app-20.1.0.tgz#86b9371290f92d51821b7299eede95336949f214"
-  integrity sha512-FCcTtmfz/Bk2laOEKOiUrQUkAnzerkRml7d3kZzJSxaBWLFxpWJQnnXqGZmD8hNWio2QEauB8llUD71KiDk+sw==
+"@react-native-firebase/app@^20.3.0":
+  version "20.3.0"
+  resolved "https://registry.yarnpkg.com/@react-native-firebase/app/-/app-20.3.0.tgz#af188e1b1adb91f6e73380e654352d1a678bb69a"
+  integrity sha512-vmlu3g59wk0C8SmunLOg+6fC99kUe+ZlfBc7h9zdcFbnK+/6XScqKkG8B0yP3ANjrk9ZqWL1+M705m/uoo/WCQ==
   dependencies:
-    opencollective-postinstall "^2.0.3"
+    firebase "10.12.2"
     superstruct "^0.6.2"
 
-"@react-native-firebase/firestore@^20.0.0":
-  version "20.1.0"
-  resolved "https://registry.yarnpkg.com/@react-native-firebase/firestore/-/firestore-20.1.0.tgz#8124aa286108a7e1c61c366d619bdfa4e4718947"
-  integrity sha512-g8na4jm7V+nBctzjeSyraK9hygOTPDv3nfkl4E+Nh7nB9DEgS74FrXXezRPVJKdkE0Nw9cWSJ1gU1tTA50ZEpg==
+"@react-native-firebase/firestore@^20.3.0":
+  version "20.3.0"
+  resolved "https://registry.yarnpkg.com/@react-native-firebase/firestore/-/firestore-20.3.0.tgz#d9e7afa4be632a5bd2dcbd4463d3e661d9d2d4d7"
+  integrity sha512-bCFjM5FBshsyRD8UQfPlzbHoOshNZ+oVSFiWP6pz1jp9mumTfTaEi0pEqqRhGuxX2mDA/1lJQT44RXfHTAQ3yQ==
 
 "@react-native/assets-registry@0.74.84":
   version "0.74.84"
@@ -4208,7 +4208,7 @@ find-yarn-workspace-root@~2.0.0:
   dependencies:
     micromatch "^4.0.2"
 
-firebase@^10.12.1:
+firebase@10.12.2, firebase@^10.12.1:
   version "10.12.2"
   resolved "https://registry.yarnpkg.com/firebase/-/firebase-10.12.2.tgz#9049286c5fafb6d686bb19ad93c7bb4a9e8756c0"
   integrity sha512-ZxEdtSvP1I9su1yf32D8TIdgxtPgxwr6z3jYAR1TXS/t+fVfpoPc/N1/N2bxOco9mNjUoc+od34v5Fn4GeKs6Q==
@@ -6171,11 +6171,6 @@ openai@^4.52.0:
     formdata-node "^4.3.2"
     node-fetch "^2.6.7"
     web-streams-polyfill "^3.2.1"
-
-opencollective-postinstall@^2.0.3:
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/opencollective-postinstall/-/opencollective-postinstall-2.0.3.tgz#7a0fff978f6dbfa4d006238fbac98ed4198c3259"
-  integrity sha512-8AV/sCtuzUeTo8gQK5qDZzARrulB3egtLzFgteqB2tcT4Mw7B8Kt7JcDHmltjz6FOAHsvTevk70gZEbhM4ZS9Q==
 
 ora@3.4.0, ora@^3.4.0:
   version "3.4.0"

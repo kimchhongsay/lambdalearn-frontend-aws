@@ -1,4 +1,6 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import { MaterialIcons } from "@expo/vector-icons";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import React, { useContext, useEffect, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -9,51 +11,57 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
-import BottomTabs from "../components/BottomTabs";
 import DynamicBody from "../components/DynamicBody";
 import TabButton from "../components/TabButton";
+import { db } from "../firebaseConfig";
 import { MyContext } from "../hooks/MyContext";
 
 const Main = ({ navigation, route }) => {
-  const { activeTopTab, setActiveTopTab } = useContext(MyContext);
-  const userInfo = route.params.userInfo; // Access userInfo from route
+  const {
+    activeTopTab,
+    incrementRefreshKey,
+    userEmail,
+    setUserEmail,
+    setActiveTopTab,
+    refreshKey,
+  } = useContext(MyContext);
+  const userInfo = route.params.userInfo;
 
   const [activeBottomTab, setActiveBottomTab] = useState("Recording");
-  const [refreshKey, setRefreshKey] = useState(0);
 
   const topTabs = {
-    Recording: ["Home", "Summaries", "Academic Summaries"],
-    Notes: ["All Notes", "Notebooks", "Favorites"],
-    Progress: [
-      "Dashboard",
-      "Course Progress",
-      "Chat with Agent",
-      "File Uploaded",
-    ],
+    Recording: ["Home", "Chat Room"],
   };
 
-  const getDefaultTopTab = (bottomTab) => {
-    const defaults = {
-      Recording: "Home",
-      Notes: "All Notes",
-      Progress: "Dashboard",
+  useEffect(() => {
+    const checkAndSaveUserEmail = async () => {
+      if (userInfo?.email) {
+        try {
+          // Check if the user document already exists
+          const userDocRef = doc(db, "User", userInfo.email);
+          const userDocSnap = await getDoc(userDocRef);
+          setUserEmail(userInfo.email);
+          if (!userDocSnap.exists()) {
+            // User document doesn't exist, so create it
+            await setDoc(userDocRef, {
+              email: userInfo.email,
+              // Add other user data if needed
+            });
+            setUserEmail(userInfo.email);
+            console.log("User email saved to Firestore");
+          } else {
+            console.log("User already exists in Firestore");
+          }
+        } catch (error) {
+          console.error("Error checking/saving user email:", error);
+        }
+      }
+      incrementRefreshKey();
     };
-    return defaults[bottomTab];
-  };
 
-  const handleBottomTabChange = (newBottomTab) => {
-    setActiveBottomTab(newBottomTab);
-    setActiveTopTab(getDefaultTopTab(newBottomTab));
-  };
+    checkAndSaveUserEmail();
+  }, [userInfo]);
 
-  const clearData = () => {
-    setActiveBottomTab("Recording");
-    setActiveTopTab(getDefaultTopTab("Recording"));
-    setRefreshKey((prevKey) => prevKey + 1); // Update the refreshKey to trigger a re-render
-  };
-
-  useEffect(() => {});
   return (
     <View style={styles.container} key={refreshKey}>
       <View style={styles.header}>
@@ -92,11 +100,6 @@ const Main = ({ navigation, route }) => {
           setActiveTopTab={setActiveTopTab}
         />
       </View>
-      {/* <BottomTabs
-        activeBottomTab={activeBottomTab}
-        setActiveBottomTab={handleBottomTabChange}
-        setActiveTopTab={setActiveTopTab}
-      /> */}
     </View>
   );
 };

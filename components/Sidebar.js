@@ -1,28 +1,31 @@
-import React, { useState, useContext } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as FileSystem from "expo-file-system";
+import { signOut } from "firebase/auth";
+import React, { useContext, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
   Alert,
   RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { signOut } from "firebase/auth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth } from "../firebaseConfig";
-import * as FileSystem from "expo-file-system";
 import { MyContext } from "../hooks/MyContext";
 
 const Sidebar = ({ navigation, setUserInfo }) => {
   const [refreshing, setRefreshing] = useState(false);
-  const { incrementRefreshKey } = useContext(MyContext);
+  const { incrementRefreshKey, userEmail, setUserEmail } =
+    useContext(MyContext);
 
   const handleSignOut = async () => {
     try {
       await signOut(auth);
       await AsyncStorage.removeItem("@user");
       setUserInfo(null);
+      setUserEmail("");
+      incrementRefreshKey();
       navigation.closeDrawer();
     } catch (error) {
       console.error("Error signing out: ", error);
@@ -49,15 +52,15 @@ const Sidebar = ({ navigation, setUserInfo }) => {
               const docFiles = await FileSystem.readDirectoryAsync(docDir);
               await Promise.all(
                 docFiles.map(async (file) => {
+                  const sanitizedEmail = userEmail.replace(/[@.]/g, "_");
                   if (
-                    file.endsWith(".mp3") ||
-                    file.endsWith(".aac") ||
-                    file.endsWith(".m4a") ||
-                    file.endsWith(".wav") ||
-                    file.endsWith(".meta")
+                    (file.endsWith(".mp3") && file.includes(sanitizedEmail)) ||
+                    (file.endsWith(".aac") && file.includes(sanitizedEmail)) ||
+                    (file.endsWith(".m4a") && file.includes(sanitizedEmail)) ||
+                    (file.endsWith(".wav") && file.includes(sanitizedEmail)) ||
+                    (file.endsWith(".meta") && file.includes(sanitizedEmail))
                   ) {
                     await FileSystem.deleteAsync(`${docDir}${file}`);
-                    console.log(`${file} deleted from document directory`);
                   }
                 })
               );
@@ -67,17 +70,22 @@ const Sidebar = ({ navigation, setUserInfo }) => {
                 const extDir = FileSystem.ExternalDirectoryPath;
                 if (extDir) {
                   const extFiles = await FileSystem.readDirectoryAsync(extDir);
+
                   await Promise.all(
                     extFiles.map(async (file) => {
                       if (
-                        file.endsWith(".mp3") ||
-                        file.endsWith(".aac") ||
-                        file.endsWith(".m4a") ||
-                        file.endsWith(".wav") ||
-                        file.endsWith(".meta")
+                        (file.endsWith(".mp3") &&
+                          file.includes(sanitizedEmail)) ||
+                        (file.endsWith(".aac") &&
+                          file.includes(sanitizedEmail)) ||
+                        (file.endsWith(".m4a") &&
+                          file.includes(sanitizedEmail)) ||
+                        (file.endsWith(".wav") &&
+                          file.includes(sanitizedEmail)) ||
+                        (file.endsWith(".meta") &&
+                          file.includes(sanitizedEmail))
                       ) {
                         await FileSystem.deleteAsync(`${extDir}/${file}`);
-                        console.log(`${file} deleted from external directory`);
                       }
                     })
                   );
@@ -92,14 +100,13 @@ const Sidebar = ({ navigation, setUserInfo }) => {
               await Promise.all(
                 cacheFiles.map(async (file) => {
                   if (
-                    file.endsWith(".mp3") ||
-                    file.endsWith(".aac") ||
-                    file.endsWith(".m4a") ||
-                    file.endsWith(".wav") ||
-                    file.endsWith(".meta")
+                    (file.endsWith(".mp3") && file.includes(sanitizedEmail)) ||
+                    (file.endsWith(".aac") && file.includes(sanitizedEmail)) ||
+                    (file.endsWith(".m4a") && file.includes(sanitizedEmail)) ||
+                    (file.endsWith(".wav") && file.includes(sanitizedEmail)) ||
+                    (file.endsWith(".meta") && file.includes(sanitizedEmail))
                   ) {
                     await FileSystem.deleteAsync(`${cacheDir}${file}`);
-                    console.log(`${file} deleted from cache directory`);
                   }
                 })
               );

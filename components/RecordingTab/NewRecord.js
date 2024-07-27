@@ -2,7 +2,7 @@ import { Entypo } from "@expo/vector-icons";
 import { Audio } from "expo-av";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   Alert,
   Dimensions,
@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import AudioRecorderPlayer from "react-native-audio-recorder-player";
 import ModalDropdown from "react-native-modal-dropdown";
+import { MyContext } from "../../hooks/MyContext";
 
 const audioRecorderPlayer = new AudioRecorderPlayer();
 const screenWidth = Dimensions.get("window").width;
@@ -64,6 +65,7 @@ const NewRecord = ({ visible, onClose }) => {
   const [otherSubject, setOtherSubject] = useState("");
   const [startTime, setStartTime] = useState(0);
   const [selectedFile, setSelectedFile] = useState(null);
+  const { userEmail } = useContext(MyContext);
 
   const subjects = ["Math", "Science", "History", "Language", "Other"];
 
@@ -121,10 +123,11 @@ const NewRecord = ({ visible, onClose }) => {
     }
   };
 
-  const generateFilename = (subject, title, datetime) => {
+  const generateFilename = (subject, title, datetime, userEmail) => {
     const sanitizedSubject = subject.replace(/\s+/g, "_");
     const sanitizedTitle = title.replace(/\s+/g, "_");
-    return `${sanitizedSubject}-${sanitizedTitle}-${datetime}.mp3`;
+    const sanitizedEmail = userEmail.replace(/[@.]/g, "_"); // Sanitize email
+    return `${sanitizedSubject}-${sanitizedTitle}-${datetime}-${sanitizedEmail}.mp3`;
   };
 
   const formatDateTime = (date) => {
@@ -143,7 +146,12 @@ const NewRecord = ({ visible, onClose }) => {
     const datetime = formatDateTime(new Date());
     const subjectToSave =
       selectedSubject === "Other" ? otherSubject : selectedSubject;
-    const filename = generateFilename(subjectToSave, recordName, datetime);
+    const filename = generateFilename(
+      subjectToSave,
+      recordName,
+      datetime,
+      userEmail
+    );
     const destinationUri = `${FileSystem.documentDirectory}/${filename}`;
 
     try {
@@ -208,7 +216,12 @@ const NewRecord = ({ visible, onClose }) => {
     const datetime = formatDateTime(new Date());
     const subjectToSave =
       selectedSubject === "Other" ? otherSubject : selectedSubject;
-    const filename = generateFilename(subjectToSave, recordName, datetime);
+    const filename = generateFilename(
+      subjectToSave,
+      recordName,
+      datetime,
+      userEmail
+    );
 
     const destinationUri = `${FileSystem.documentDirectory}${filename}`;
 

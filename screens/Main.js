@@ -92,11 +92,11 @@ const Main = ({ navigation, route }) => {
           setActiveTopTab={setActiveTopTab}
         />
       </View>
-      <BottomTabs
+      {/* <BottomTabs
         activeBottomTab={activeBottomTab}
         setActiveBottomTab={handleBottomTabChange}
         setActiveTopTab={setActiveTopTab}
-      />
+      /> */}
     </View>
   );
 };

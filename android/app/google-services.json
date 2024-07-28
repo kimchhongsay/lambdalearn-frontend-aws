@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "185963385145",
+    "project_id": "alcademy-assist-3fce2",
+    "storage_bucket": "alcademy-assist-3fce2.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:185963385145:android:e3744778d29871b9f558e8",
+        "android_client_info": {
+          "package_name": "com.kimchhong.alcademyassist"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "185963385145-o5k6dek5colpf07hkepr23pvnkm10vfu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kimchhong.alcademyassist",
+            "certificate_hash": "7320e50e5f48be490da109ab3e3fd22c673eb7b6"
+          }
+        },
+        {
+          "client_id": "185963385145-or5p5ssmd5brp1e6377ms8dcilmhrn6n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD1Hk51ROe-2wGhYTCjOOUWykqW3776lh8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "185963385145-or5p5ssmd5brp1e6377ms8dcilmhrn6n.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

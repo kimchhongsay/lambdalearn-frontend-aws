@@ -30,6 +30,7 @@ const MyProvider = ({ children }) => {
         incrementRefreshKey,
         userEmail,
         setUserEmail,
+        removeHtmlTags,
       }}>
       {children}
     </MyContext.Provider>

@@ -8,12 +8,19 @@ import {
   setDoc,
   collection,
   onSnapshot,
+  updateDoc,
+  deleteField,
+  Timestamp,
 } from "firebase/firestore";
 
 // _____________________________________________________________________________
 // The following functions are used in the Transcript component in the snippet that use in RecordedSummarizeData.js
 const SERVER_URL =
   "https://1ec4-2001-fb1-14a-5e84-f4cb-cc68-9983-e11f.ngrok-free.app";
+
+const getUserDocRef = (userEmail) => {
+  return doc(db, "Users", userEmail);
+};
 
 const transcriptAudio = async (filePath) => {
   const api_route = "/transcribe/";
@@ -70,11 +77,74 @@ const removeFromAsyncStorage = async (key) => {
   await AsyncStorage.removeItem(key);
 };
 
+function generateSummaryId() {
+  return Timestamp.now().toMillis().toString();
+}
+
+const saveOrUpdateSummaryToFirestore = async (
+  userEmail,
+  language,
+  summaryText,
+  subject
+) => {
+  try {
+    const summaryId = generateSummaryId();
+    const userDocRef = getUserDocRef(userEmail);
+    const summaryRef = doc(userDocRef, "summaries", summaryId);
+
+    // Data to be saved
+    const summaryData = {
+      Subject: subject,
+      Language: language,
+      Text: summaryText,
+      Date: new Date(),
+    };
+
+    await setDoc(summaryRef, summaryData);
+    console.log("Summary saved/updated successfully!");
+  } catch (error) {
+    console.error("Error saving/updating summary: ", error);
+    throw error;
+  }
+};
+
+const getSummariesFromFirestore = async (userEmail, language) => {
+  try {
+    const userDocRef = getUserDocRef(userEmail);
+    const summariesRef = collection(userDocRef, "summaries");
+
+    // Create a query for summaries in the specified language
+    const q = query(summariesRef, where("Language", "==", language));
+
+    const querySnapshot = await getDocs(q);
+    const summaries = [];
+    querySnapshot.forEach((doc) => {
+      summaries.push({ id: doc.id, ...doc.data() });
+    });
+
+    return summaries;
+  } catch (error) {
+    console.error("Error getting summaries: ", error);
+    throw error;
+  }
+};
+
+const deleteSummaryFromFirestore = async (userEmail, filePath, language) => {
+  try {
+    const userDocRef = getUserDocRef(userEmail);
+    const summaryRef = doc(userDocRef, "summaries", filePath);
+    await updateDoc(summaryRef, {
+      [language]: deleteField(),
+    });
+    console.log("Summary deleted successfully!");
+  } catch (error) {
+    console.error("Error deleting summary: ", error);
+    throw error; // Re-throw to handle in component
+  }
+};
+
 // _____________________________________________________________________________
 // The following functions are used in the ChatRoom component in the snippet
-const getUserDocRef = (userEmail) => {
-  return doc(db, "Users", userEmail);
-};
 
 const getUserDocSnap = async (userDocRef) => {
   return await getDoc(userDocRef);
@@ -124,4 +194,7 @@ export {
   createNewChatRoom,
   updateChatRoomCount,
   fetchChatRoom,
+  saveOrUpdateSummaryToFirestore,
+  getSummariesFromFirestore,
+  deleteSummaryFromFirestore,
 };

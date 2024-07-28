@@ -1,4 +1,5 @@
 import React, { createContext, useState, useCallback } from "react";
+import { removeHtmlTags } from "../utils/removeHtmlTags";
 
 const MyContext = createContext({
   activeTopTab: "Home",
@@ -7,6 +8,7 @@ const MyContext = createContext({
   incrementRefreshKey: () => {},
   userEmail: "",
   setUserEmail: () => {},
+  removeHtmlTags,
 });
 
 const MyProvider = ({ children }) => {

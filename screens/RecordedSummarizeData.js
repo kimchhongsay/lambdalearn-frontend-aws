@@ -2,7 +2,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Audio } from "expo-av";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -26,7 +26,11 @@ import {
   saveToAsyncStorage,
   getFromAsyncStorage,
   removeFromAsyncStorage,
+  saveOrUpdateSummaryToFirestore,
+  getSummaryFromFirestore,
+  deleteSummaryFromFirestore,
 } from "../api/api";
+import { MyContext } from "../hooks/MyContext";
 
 const summarizeLanguageOption = [
   { value: "*English", label: "English" },
@@ -38,6 +42,7 @@ const summarizeLanguageOption = [
 
 const RecordedSummarizeData = ({ route, navigation }) => {
   const { subject, title, duration, datetime, filePath } = route.params;
+  const { userEmail, removeHtmlTags } = useContext(MyContext);
 
   // Get window width using useWindowDimensions
   const { width: windowWidth } = useWindowDimensions();
@@ -254,6 +259,13 @@ const RecordedSummarizeData = ({ route, navigation }) => {
             `${filePath}_summarized_${language}`,
             summarizedText
           );
+          // Save to Firestore
+          await saveOrUpdateSummaryToFirestore(
+            userEmail, // Pass userEmail here
+            language,
+            removeHtmlTags(summarizedText),
+            subject
+          );
         } catch (error) {
           console.error(`Error translating/summarizing in ${language}:`, error);
         }
@@ -265,21 +277,6 @@ const RecordedSummarizeData = ({ route, navigation }) => {
       }));
     } finally {
       setState((prevState) => ({ ...prevState, loadingSummarize: false }));
-    }
-  };
-
-  const handleSharePDF = async () => {
-    try {
-      const options = {
-        html: generateHTMLContent(),
-        fileName: "summarized_text",
-        directory: "Documents",
-      };
-
-      const file = await RNHTMLtoPDF.convert(options);
-      await Share.open({ url: file.filePath });
-    } catch (error) {
-      console.error("Error generating or sharing PDF:", error);
     }
   };
 
@@ -374,10 +371,6 @@ const RecordedSummarizeData = ({ route, navigation }) => {
   };
 
   const shareSummarizedText = async (language) => {
-    const removeHtmlTags = (htmlString) => {
-      return htmlString.replace(/<\/?[^>]+>/gi, "");
-    };
-
     try {
       const textToShare = state.summarizedTexts[language];
 

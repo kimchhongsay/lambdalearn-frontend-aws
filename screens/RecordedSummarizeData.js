@@ -18,8 +18,15 @@ import RNHTMLtoPDF from "react-native-html-to-pdf";
 import HTML from "react-native-render-html";
 import Share from "react-native-share";
 import DropdownPicker from "../components/assets/DropdownPicker";
-
-const SERVER_URL = "https://118d-223-204-200-73.ngrok-free.app";
+import {
+  transcriptAudio,
+  purgeTranscript,
+  summarizeTranscript,
+  translateText,
+  saveToAsyncStorage,
+  getFromAsyncStorage,
+  removeFromAsyncStorage,
+} from "../api/api";
 
 const summarizeLanguageOption = [
   { value: "*English", label: "English" },
@@ -172,29 +179,14 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     }
   };
 
-  const transcriptAudio = async () => {
-    const api_route = "/transcribe/";
+  const handleTranscriptAudio = async () => {
     setState((prevState) => ({
       ...prevState,
       loadingTranscript: true,
       error: null,
     }));
     try {
-      const formData = new FormData();
-      formData.append("file", {
-        uri: filePath,
-        type: "audio/mpeg",
-        name: "audio.mp3",
-      });
-
-      const response = await axios.post(SERVER_URL + api_route, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        timeout: 280000,
-      });
-
-      const { transcript } = response.data;
+      const transcript = await transcriptAudio(filePath);
       setState((prevState) => ({
         ...prevState,
         transcript,
@@ -202,7 +194,7 @@ const RecordedSummarizeData = ({ route, navigation }) => {
         isEditingTranscript: true,
       }));
 
-      await AsyncStorage.setItem(filePath, transcript);
+      await saveToAsyncStorage(filePath, transcript);
     } catch (error) {
       setState((prevState) => ({
         ...prevState,
@@ -213,7 +205,7 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     }
   };
 
-  const summarizeTranscript = async () => {
+  const handleSummarizeTranscript = async () => {
     setState((prevState) => ({
       ...prevState,
       loadingSummarize: true,
@@ -221,68 +213,31 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     }));
 
     try {
-      // 1. Check if we have a primary English summary stored
-      let primarySummary = await AsyncStorage.getItem(
+      let primarySummary = await getFromAsyncStorage(
         `${filePath}_primarySummary`
       );
 
       if (!primarySummary) {
-        // No primary summary, so we need to transcribe and summarize in English first
-        const transcript = state.transcript || (await transcriptAudio());
-        console.log("Sending transcript for summarization: ", transcript);
+        const transcript = state.transcript || (await handleTranscriptAudio());
 
-        // 2. Purge the transcript
-        console.log("Purging the transcript...");
-        const purgeResponse = await axios.post(SERVER_URL + "/purge/", {
-          transcript: transcript,
-          language: "The same language format as input", // You might need to adjust this based on your API
-        });
-        const purgedTranscript = purgeResponse.data.purged_transcript;
-        console.log("Purged Transcript Result: ", purgedTranscript);
+        const purgedTranscript = await purgeTranscript(transcript);
 
-        // 3. Summarize in English to create the primary summary
-        console.log("Creating primary English summary...");
-        const englishSummaryResponse = await axios.post(
-          SERVER_URL + "/summarize/",
-          {
-            purged_transcript: purgedTranscript,
-            language: "English",
-          }
-        );
-        primarySummary = englishSummaryResponse.data.transcribe_summarize;
+        primarySummary = await summarizeTranscript(purgedTranscript);
 
-        // 4. Store the primary summary for future use
-        await AsyncStorage.setItem(
-          `${filePath}_primarySummary`,
-          primarySummary
-        );
-      } else {
-        console.log("Using existing primary summary.");
+        await saveToAsyncStorage(`${filePath}_primarySummary`, primarySummary);
       }
 
-      // 5. Summarize/translate based on selected languages
       for (let i = 0; i < state.selectedSummarizeLanguages.length; i++) {
         const language = state.selectedSummarizeLanguages[i];
-        console.log("Summarizing/translating for language: ", language);
 
         try {
           let summarizedText;
           if (language === "English") {
-            // If English is selected, use the primary summary directly
             summarizedText = primarySummary;
           } else {
-            // For other languages, translate the primary summary
-            const translateResponse = await axios.post(
-              SERVER_URL + "/translate_with_llm/",
-              {
-                text: primarySummary,
-                target_language: language,
-              }
-            );
-            summarizedText = translateResponse.data.translated_text;
+            summarizedText = await translateText(primarySummary, language);
           }
 
-          // Update the state with the summarized/translated text
           setState((prevState) => ({
             ...prevState,
             summarizedTexts: {
@@ -295,35 +250,36 @@ const RecordedSummarizeData = ({ route, navigation }) => {
             },
           }));
 
-          await AsyncStorage.setItem(
+          await saveToAsyncStorage(
             `${filePath}_summarized_${language}`,
             summarizedText
           );
         } catch (error) {
-          console.error(
-            `Error during summarization/translation for ${language}:`,
-            error.response ? error.response.data : error.message
-          );
-          setState((prevState) => ({
-            ...prevState,
-            error: `Error summarizing/translating transcript for ${language}: ${error.message}`,
-          }));
+          console.error(`Error translating/summarizing in ${language}:`, error);
         }
       }
     } catch (error) {
-      console.error(
-        "Error during summarization process:",
-        error.response ? error.response.data : error.message
-      );
       setState((prevState) => ({
         ...prevState,
-        error: `Error during summarization: ${error.message}`,
+        error: `Error summarizing transcript: ${error.message}`,
       }));
     } finally {
-      setState((prevState) => ({
-        ...prevState,
-        loadingSummarize: false,
-      }));
+      setState((prevState) => ({ ...prevState, loadingSummarize: false }));
+    }
+  };
+
+  const handleSharePDF = async () => {
+    try {
+      const options = {
+        html: generateHTMLContent(),
+        fileName: "summarized_text",
+        directory: "Documents",
+      };
+
+      const file = await RNHTMLtoPDF.convert(options);
+      await Share.open({ url: file.filePath });
+    } catch (error) {
+      console.error("Error generating or sharing PDF:", error);
     }
   };
 
@@ -388,7 +344,7 @@ const RecordedSummarizeData = ({ route, navigation }) => {
   const deleteSummarizedText = async (language) => {
     try {
       // 1. Remove from AsyncStorage
-      await AsyncStorage.removeItem(`${filePath}_summarized_${language}`);
+      removeFromAsyncStorage(`${filePath}_summarized_${language}`);
 
       // 2. Update the state to reflect the deletion
       setState((prevState) => {
@@ -470,7 +426,7 @@ const RecordedSummarizeData = ({ route, navigation }) => {
         <View style={styles.transcriptContainer}>
           <Text style={styles.heading}>Transcript:</Text>
           <TouchableOpacity
-            onPress={transcriptAudio}
+            onPress={handleTranscriptAudio}
             style={styles.actionButton}>
             {state.loadingTranscript ? (
               <ActivityIndicator color="#ffffff" />
@@ -547,7 +503,7 @@ const RecordedSummarizeData = ({ route, navigation }) => {
         <View style={styles.summarizeContainer}>
           <Text style={styles.heading}>Summarized Text:</Text>
           <TouchableOpacity
-            onPress={summarizeTranscript}
+            onPress={handleSummarizeTranscript}
             style={styles.actionButton}>
             {state.loadingSummarize ? (
               <ActivityIndicator color="#ffffff" />

@@ -185,6 +185,31 @@ const fetchChatRoom = async (userDocRef) => {
   return chatRoomsData;
 };
 
+const getDistinctSubjectsFromFirestore = async (userEmail) => {
+  try {
+    const userDocRef = getUserDocRef(userEmail);
+    const summariesRef = collection(userDocRef, "summaries");
+
+    // Fetch all documents from the "summaries" collection
+    const querySnapshot = await getDocs(summariesRef);
+    const subjects = new Set();
+
+    // Extract distinct subjects
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.Subject) {
+        subjects.add(data.Subject);
+      }
+    });
+
+    // Convert Set to Array
+    return Array.from(subjects);
+  } catch (error) {
+    console.error("Error fetching distinct subjects: ", error);
+    throw error;
+  }
+};
+
 export {
   transcriptAudio,
   purgeTranscript,
@@ -201,4 +226,5 @@ export {
   saveOrUpdateSummaryToFirestore,
   getSummariesFromFirestore,
   deleteSummaryFromFirestore,
+  getDistinctSubjectsFromFirestore,
 };

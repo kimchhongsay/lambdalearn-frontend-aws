@@ -303,6 +303,15 @@ const RecordedSummarizeData = ({ route, navigation }) => {
         `${filePath}_summarized_${language}`,
         state.summarizedTexts[language]
       );
+
+      const simmarizeId = `${filePath}_summarized_${language}`;
+      await saveOrUpdateSummaryToFirestore(
+        simmarizeId,
+        userEmail, // Pass userEmail here
+        language,
+        removeHtmlTags(state.summarizedTexts[language]),
+        subject
+      );
       setState((prevState) => ({
         ...prevState,
         isEditingSummarizedText: {

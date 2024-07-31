@@ -11,12 +11,17 @@ import {
   updateDoc,
   deleteField,
   Timestamp,
+  FieldPath,
+  deleteDoc,
 } from "firebase/firestore";
 
 // _____________________________________________________________________________
 // The following functions are used in the Transcript component in the snippet that use in RecordedSummarizeData.js
-const SERVER_URL =
-  "https://1ec4-2001-fb1-14a-5e84-f4cb-cc68-9983-e11f.ngrok-free.app";
+const SERVER_URL = "https://cccd-202-29-20-79.ngrok-free.app";
+
+const encodedFilePath = (filePath) => {
+  return filePath.replace(/\//g, "%2F");
+};
 
 const getUserDocRef = (userEmail) => {
   return doc(db, "Users", userEmail);
@@ -35,7 +40,7 @@ const transcriptAudio = async (filePath) => {
     headers: {
       "Content-Type": "multipart/form-data",
     },
-    timeout: 280000,
+    timeout: 600000,
   });
 
   return response.data.transcript;
@@ -77,20 +82,19 @@ const removeFromAsyncStorage = async (key) => {
   await AsyncStorage.removeItem(key);
 };
 
-function generateSummaryId() {
-  return Timestamp.now().toMillis().toString();
-}
-
 const saveOrUpdateSummaryToFirestore = async (
+  filePath,
   userEmail,
   language,
   summaryText,
   subject
 ) => {
   try {
-    const summaryId = generateSummaryId();
+    const summarizeId = encodedFilePath(filePath);
+    console.log("File path: ", filePath);
+    const summaryId = filePath;
     const userDocRef = getUserDocRef(userEmail);
-    const summaryRef = doc(userDocRef, "summaries", summaryId);
+    const summaryRef = doc(userDocRef, "summaries", summarizeId);
 
     // Data to be saved
     const summaryData = {
@@ -129,17 +133,17 @@ const getSummariesFromFirestore = async (userEmail, language) => {
   }
 };
 
-const deleteSummaryFromFirestore = async (userEmail, filePath, language) => {
+const deleteSummaryFromFirestore = async (userEmail, filePath) => {
+  const summarizeId = encodedFilePath(filePath);
   try {
     const userDocRef = getUserDocRef(userEmail);
-    const summaryRef = doc(userDocRef, "summaries", filePath);
-    await updateDoc(summaryRef, {
-      [language]: deleteField(),
-    });
+    const summaryRef = doc(userDocRef, "summaries", summarizeId);
+
+    await deleteDoc(summaryRef);
     console.log("Summary deleted successfully!");
   } catch (error) {
     console.error("Error deleting summary: ", error);
-    throw error; // Re-throw to handle in component
+    throw error;
   }
 };
 

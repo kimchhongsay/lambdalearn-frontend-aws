@@ -259,8 +259,11 @@ const RecordedSummarizeData = ({ route, navigation }) => {
             `${filePath}_summarized_${language}`,
             summarizedText
           );
+
           // Save to Firestore
+          const simmarizeId = `${filePath}_summarized_${language}`;
           await saveOrUpdateSummaryToFirestore(
+            simmarizeId,
             userEmail, // Pass userEmail here
             language,
             removeHtmlTags(summarizedText),
@@ -342,6 +345,11 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     try {
       // 1. Remove from AsyncStorage
       removeFromAsyncStorage(`${filePath}_summarized_${language}`);
+
+      // Remove summarize text from firestore
+      const summarizeId = `${filePath}_summarized_${language}`;
+      console.log(userEmail + summarizeId);
+      deleteSummaryFromFirestore(userEmail, summarizeId);
 
       // 2. Update the state to reflect the deletion
       setState((prevState) => {

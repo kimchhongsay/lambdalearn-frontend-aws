@@ -22,6 +22,7 @@ import {
 } from "../../api/api";
 import { MyContext } from "../../hooks/MyContext";
 import DropdownPicker from "../assets/DropdownPicker";
+import ChatRoomCard from "../ChatRoomTab/ChatRoomCard";
 
 const ChatRoom = () => {
   const { userEmail, refreshKey, incrementRefreshKey } = useContext(MyContext);
@@ -64,8 +65,9 @@ const ChatRoom = () => {
       // Convert startDate and endDate to Date objects
       const formattedChatRooms = chatRooms.map((chatRoom) => ({
         ...chatRoom,
-        startDate: formatTimestamp(chatRoom.endDate),
-        endDate: formatTimestamp(chatRoom.startDate),
+        startDate: formatTimestamp(chatRoom.startDate),
+        endDate: formatTimestamp(chatRoom.endDate),
+        createdAt: formatTimestamp(chatRoom.createdAt),
       }));
 
       setState((prevState) => ({
@@ -215,20 +217,25 @@ const ChatRoom = () => {
   }, [userEmail]);
 
   return (
-    <ScrollView style={styles.container} key={refreshKey}>
-      <Text>Chat room</Text>
-      <TouchableOpacity onPress={handleCreateANewChatRoom}>
-        <Text>Create new Chat room</Text>
-      </TouchableOpacity>
-      {state.chatRoomsData.map((chatRoom, index) => (
-        <View key={index}>
-          <Text>ChatRoomID: {chatRoom.subjects.join(", ")}</Text>
-          <Text>Language: {chatRoom.language}</Text>
-          <Text>Start date: {chatRoom.startDate}</Text>
-          <Text>End Date: {chatRoom.endDate}</Text>
-          <Text>___________________________________________</Text>
-        </View>
-      ))}
+    <View style={styles.container} key={refreshKey}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.createNewButton}
+          onPress={handleCreateANewChatRoom}>
+          <Text style={styles.createNewButtonText}>Create Chat</Text>
+        </TouchableOpacity>
+      </View>
+      <ScrollView style={styles.chatRoomList} key={refreshKey}>
+        {state.chatRoomsData.map((chatRoom, index) => (
+          <ChatRoomCard
+            key={index}
+            chatRoom={chatRoom}
+            onPress={() => {
+              console.log("Chat room pressed:", chatRoom);
+            }}
+          />
+        ))}
+      </ScrollView>
       <Modal
         visible={state.modalVisible}
         animationType="fade"
@@ -326,14 +333,18 @@ const ChatRoom = () => {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center", // Vertically center items
+    justifyContent: "flex-end", // Horizontally align items
     backgroundColor: "#fff",
   },
   absolute: {
@@ -370,6 +381,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 20,
     textAlign: "center",
+    color: "#2196F3",
   },
   modalContent: {
     marginBottom: 20,
@@ -410,6 +422,22 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: "white",
     fontSize: 16,
+  },
+  createNewButton: {
+    backgroundColor: "#2196F3",
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 5,
+  },
+  createNewButtonText: {
+    color: "white",
+    fontSize: 16,
+  },
+
+  // Chat Room List Styles
+  chatRoomList: {
+    flex: 1, // This makes ScrollView take up remaining space
+    marginTop: 10,
   },
 });
 

@@ -69,8 +69,8 @@ const RecordingItem = ({ subject, title, duration, datetime, filePath }) => {
           onPress={handleClickRecordedItem}>
           <FontAwesome
             name="file-audio-o"
-            size={24}
-            color="black"
+            size={28}
+            color="#FB8C00"
             style={styles.audioIcon}
           />
           <View style={styles.listItem}>
@@ -140,14 +140,14 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   subjectText: {
-    color: "#000000",
+    color: "#ffffff",
     fontSize: 16,
-    fontWeight: "400",
+    fontWeight: "600",
     textDecorationLine: "underline",
     paddingTop: 8,
     paddingHorizontal: 16,
     paddingBottom: 8,
-    backgroundColor: "#96C9F4",
+    backgroundColor: "#42A5F5",
   },
   listItemContainer: {
     flexDirection: "row",

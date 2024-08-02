@@ -14,8 +14,6 @@ import { SortingOptions, sortRecordings } from "../assets/SortingOptions";
 import NewRecord from "../RecordingTab/NewRecord";
 import RecordingItem from "../RecordingTab/RecordingItem";
 
-const screenWidth = Dimensions.get("window").width;
-
 const RecordingHome = () => {
   const { refreshKey, incrementRefreshKey, userEmail } = useContext(MyContext);
   const [isNewRecordModalVisible, setIsNewRecordModalVisible] = useState(false);

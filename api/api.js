@@ -1,25 +1,23 @@
-import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { db } from "../firebaseConfig";
+import axios from "axios";
 import {
+  collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
-  setDoc,
-  collection,
-  onSnapshot,
-  updateDoc,
-  deleteField,
-  Timestamp,
-  FieldPath,
-  deleteDoc,
   query,
+  setDoc,
+  Timestamp,
+  updateDoc,
   where,
 } from "firebase/firestore";
+import { db } from "../firebaseConfig";
 
 // _____________________________________________________________________________
 // The following functions are used in the Transcript component in the snippet that use in RecordedSummarizeData.js
-const SERVER_URL = "https://cccd-202-29-20-79.ngrok-free.app";
+const SERVER_URL =
+  "https://7a84-2001-fb1-148-756-1d57-8a11-5fde-baf0.ngrok-free.app";
 
 const encodedFilePath = (filePath) => {
   return filePath.replace(/\//g, "%2F");
@@ -93,7 +91,7 @@ const saveOrUpdateSummaryToFirestore = async (
 ) => {
   try {
     const summarizeId = encodedFilePath(filePath);
-    console.log("File path: ", filePath);
+    // console.log("File path: ", filePath);
     const summaryId = filePath;
     const userDocRef = getUserDocRef(userEmail);
     const summaryRef = doc(userDocRef, "summaries", summarizeId);
@@ -107,7 +105,7 @@ const saveOrUpdateSummaryToFirestore = async (
     };
 
     await setDoc(summaryRef, summaryData);
-    console.log("Summary saved/updated successfully!");
+    // console.log("Summary saved/updated successfully!");
   } catch (error) {
     console.error("Error saving/updating summary: ", error);
     throw error;
@@ -121,7 +119,7 @@ const deleteSummaryFromFirestore = async (userEmail, filePath) => {
     const summaryRef = doc(userDocRef, "summaries", summarizeId);
 
     await deleteDoc(summaryRef);
-    console.log("Summary deleted successfully!");
+    // console.log("Summary deleted successfully!");
   } catch (error) {
     console.error("Error deleting summary: ", error);
     throw error;
@@ -135,37 +133,42 @@ const getUserDocSnap = async (userDocRef) => {
   return await getDoc(userDocRef);
 };
 
-const createNewChatRoom = async (userDocRef, chatRoomCount) => {
-  const newChatRoomRef = doc(
-    collection(userDocRef, "ChatRooms"),
-    `ChatRoom${chatRoomCount}`
-  );
-  await setDoc(newChatRoomRef, {
-    createdAt: new Date(),
-    // Add other initial chat room data if needed
-  });
-  return newChatRoomRef;
-};
-
-const updateChatRoomCount = async (userDocRef, chatRoomCount) => {
-  await setDoc(userDocRef, { chatRoomCount }, { merge: true });
-};
-
 const fetchChatRoom = async (userDocRef) => {
-  const chatRoomsRef = collection(userDocRef, "ChatRooms");
+  const chatRoomsRef = collection(userDocRef, "chatrooms");
   const chatRoomsSnapshot = await getDocs(chatRoomsRef);
 
-  const chatRoomsData = [];
-  chatRoomsSnapshot.forEach((doc) => {
-    chatRoomsData.push({
-      id: doc.id,
-      ...doc.data(),
-    });
-  });
+  const chatRoomsData = chatRoomsSnapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+
+  // chatRoomsData.forEach((chatRoom) => {
+  //   const createdAt = new Date(chatRoom.createdAt.seconds * 1000);
+  //   const SummarizeEndDate = new Date(chatRoom.endDate.seconds * 1000);
+  //   const SummarizeStartDate = new Date(chatRoom.startDate.seconds * 1000);
+
+  //   console.log("Chat Room ID:", chatRoom.chatRoomId);
+  //   console.log(
+  //     "Created At:",
+  //     createdAt.toLocaleDateString() // Format as date only
+  //   );
+  //   console.log(
+  //     "End Date:",
+  //     SummarizeEndDate.toLocaleDateString() // Format as date only
+  //   );
+  //   console.log("Language:", chatRoom.language);
+  //   console.log(
+  //     "Start Date:",
+  //     SummarizeStartDate.toLocaleDateString() // Format as date only
+  //   );
+  //   console.log("Subjects:", chatRoom.subjects.join(", "));
+  //   console.log("User Docs:", chatRoom.userDocs);
+  // });
 
   return chatRoomsData;
 };
 
+// Get distinct subjects from Firestore
 const getDistinctSubjectsFromFirestore = async (userEmail) => {
   try {
     const userDocRef = getUserDocRef(userEmail);
@@ -185,6 +188,32 @@ const getDistinctSubjectsFromFirestore = async (userEmail) => {
 
     // Convert Set to Array
     return Array.from(subjects);
+  } catch (error) {
+    console.error("Error fetching distinct subjects: ", error);
+    throw error;
+  }
+};
+
+// Get distinct language from Firestore
+const getDistinctLanguageFromFirestore = async (userEmail) => {
+  try {
+    const userDocRef = getUserDocRef(userEmail);
+    const summariesRef = collection(userDocRef, "summaries");
+
+    // Fetch all documents from the "summaries" collection
+    const querySnapshot = await getDocs(summariesRef);
+    const languages = new Set();
+
+    // Extract distinct languages
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.Subject) {
+        languages.add(data.Language);
+      }
+    });
+
+    // Convert Set to Array
+    return Array.from(languages);
   } catch (error) {
     console.error("Error fetching distinct subjects: ", error);
     throw error;
@@ -215,11 +244,11 @@ const getSummariesFromFirestore = async (
     }
 
     if (startDate && endDate) {
-      q = query(
-        q,
-        where("Date", ">=", Timestamp.fromDate(new Date(startDate)))
-      );
-      q = query(q, where("Date", "<=", Timestamp.fromDate(new Date(endDate))));
+      const startTimestamp = Timestamp.fromDate(new Date(startDate));
+      const endTimestamp = Timestamp.fromDate(new Date(endDate));
+
+      q = query(q, where("Date", ">=", startTimestamp));
+      q = query(q, where("Date", "<=", endTimestamp));
     }
 
     const querySnapshot = await getDocs(q);
@@ -228,28 +257,106 @@ const getSummariesFromFirestore = async (
       summaries.push({ id: doc.id, ...doc.data() });
     });
 
-    return summaries;
+    // console.log("Summaries fetched successfully!");
+    // console.log("Summaries: ", summaries);
+
+    let formatSummarize = ""; // Change from const to let
+    if (Array.isArray(summaries) && summaries.length > 0) {
+      formatSummarize = summaries
+        .map(
+          (item, index) =>
+            `Summary ${index + 1}:\n` +
+            `  Text: ${item.Text}\n` +
+            `  Summarize Date: ${new Date(
+              item.Date.seconds * 1000
+            ).toLocaleString()}\n`
+        )
+        .join("\n");
+      // console.log(formatSummarize);
+    } else {
+      console.log("No summaries available or summaries is not an array");
+    }
+
+    return formatSummarize;
   } catch (error) {
     console.error("Error getting summaries: ", error);
     throw error;
   }
 };
 
+// Function to create a chat room
+const createChatRoom = async (
+  userEmail,
+  selectedSubject,
+  selectedLanguage,
+  startDate,
+  endDate
+) => {
+  try {
+    const userDocRef = getUserDocRef(userEmail);
+    const chatRoomId = new Date().toISOString(); // Generate a unique ID for the chat room
+
+    // Strip the time component by setting time to midnight
+    const startDateOnly = new Date(startDate);
+    startDateOnly.setHours(0, 0, 0, 0);
+    const endDateOnly = new Date(endDate);
+    endDateOnly.setHours(0, 0, 0, 0);
+
+    // Save chat room details into 'chatrooms' collection
+    const chatRoomRef = doc(userDocRef, "chatrooms", chatRoomId);
+    await setDoc(chatRoomRef, {
+      chatRoomId,
+      subjects: selectedSubject,
+      language: selectedLanguage,
+      startDate: Timestamp.fromDate(startDateOnly),
+      endDate: Timestamp.fromDate(endDateOnly),
+      createdAt: Timestamp.now(),
+    });
+
+    // Fetch summaries based on user selection
+    const summariesData = await getSummariesFromFirestore(
+      userEmail,
+      selectedSubject,
+      selectedLanguage,
+      startDateOnly,
+      endDateOnly
+    );
+
+    // Save summaries directly in the chat room document as a field
+    await updateDoc(chatRoomRef, {
+      userDocs: summariesData,
+    });
+
+    // Create a 'chat' collection for storing user messages (initially empty)
+    await setDoc(doc(chatRoomRef, "chat", "messages"), {
+      messages: [], // Initialize with an empty array
+    });
+
+    return {
+      chatRoomId,
+      userDocs: summariesData,
+    };
+  } catch (error) {
+    console.error("Error creating chat room:", error);
+    throw error;
+  }
+};
+
 export {
-  transcriptAudio,
-  purgeTranscript,
-  summarizeTranscript,
-  translateText,
-  saveToAsyncStorage,
+  createChatRoom,
+  deleteSummaryFromFirestore,
+  fetchChatRoom,
+  getDistinctLanguageFromFirestore,
+  getDistinctSubjectsFromFirestore,
   getFromAsyncStorage,
-  removeFromAsyncStorage,
+  getSummariesFromFirestore,
   getUserDocRef,
   getUserDocSnap,
-  createNewChatRoom,
-  updateChatRoomCount,
-  fetchChatRoom,
+  purgeTranscript,
+  removeFromAsyncStorage,
   saveOrUpdateSummaryToFirestore,
-  getSummariesFromFirestore,
-  deleteSummaryFromFirestore,
-  getDistinctSubjectsFromFirestore,
+  saveToAsyncStorage,
+  summarizeTranscript,
+  transcriptAudio,
+  translateText,
 };

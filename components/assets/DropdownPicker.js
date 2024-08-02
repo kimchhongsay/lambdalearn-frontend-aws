@@ -8,10 +8,11 @@ import {
   View,
 } from "react-native";
 import ModalDropdown from "react-native-modal-dropdown";
+
 const DropdownPicker = ({
   options,
   onSelect,
-  defaultValue,
+  defaultValue = [], // Default to an empty array if not provided
   otherValue,
   setOtherValue,
 }) => {
@@ -58,7 +59,7 @@ const DropdownPicker = ({
         textStyle={styles.dropdownText}
         dropdownStyle={styles.dropdownDropdown}
         renderRow={renderDropdownItem}
-        defaultValue={defaultValue}
+        defaultValue={defaultValue.length ? defaultValue.join(", ") : "Select"}
       />
       {otherValue !== undefined && otherValue === "Other" && (
         <TextInput

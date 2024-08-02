@@ -33,10 +33,10 @@ import {
 import { MyContext } from "../hooks/MyContext";
 
 const summarizeLanguageOption = [
-  { value: "*English", label: "English" },
-  { value: "*Thai", label: "Thai" },
-  { value: "*French", label: "French" },
-  { value: "*Khmer", label: "Khmer" },
+  { value: "English", label: "English" },
+  { value: "Thai", label: "Thai" },
+  { value: "French", label: "French" },
+  { value: "Khmer", label: "Khmer" },
   // Add more languages as needed
 ];
 
@@ -357,7 +357,6 @@ const RecordedSummarizeData = ({ route, navigation }) => {
 
       // Remove summarize text from firestore
       const summarizeId = `${filePath}_summarized_${language}`;
-      console.log(userEmail + summarizeId);
       deleteSummaryFromFirestore(userEmail, summarizeId);
 
       // 2. Update the state to reflect the deletion

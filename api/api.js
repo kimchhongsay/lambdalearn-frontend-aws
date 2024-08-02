@@ -13,6 +13,8 @@ import {
   Timestamp,
   FieldPath,
   deleteDoc,
+  query,
+  where,
 } from "firebase/firestore";
 
 // _____________________________________________________________________________
@@ -112,27 +114,6 @@ const saveOrUpdateSummaryToFirestore = async (
   }
 };
 
-const getSummariesFromFirestore = async (userEmail, language) => {
-  try {
-    const userDocRef = getUserDocRef(userEmail);
-    const summariesRef = collection(userDocRef, "summaries");
-
-    // Create a query for summaries in the specified language
-    const q = query(summariesRef, where("Language", "==", language));
-
-    const querySnapshot = await getDocs(q);
-    const summaries = [];
-    querySnapshot.forEach((doc) => {
-      summaries.push({ id: doc.id, ...doc.data() });
-    });
-
-    return summaries;
-  } catch (error) {
-    console.error("Error getting summaries: ", error);
-    throw error;
-  }
-};
-
 const deleteSummaryFromFirestore = async (userEmail, filePath) => {
   const summarizeId = encodedFilePath(filePath);
   try {
@@ -206,6 +187,50 @@ const getDistinctSubjectsFromFirestore = async (userEmail) => {
     return Array.from(subjects);
   } catch (error) {
     console.error("Error fetching distinct subjects: ", error);
+    throw error;
+  }
+};
+
+// Function to fetch summaries based on subject, language, startDate, and endDate
+const getSummariesFromFirestore = async (
+  userEmail,
+  subjects,
+  language,
+  startDate,
+  endDate
+) => {
+  try {
+    const userDocRef = getUserDocRef(userEmail);
+    const summariesRef = collection(userDocRef, "summaries");
+
+    // Create a query with multiple conditions
+    let q = query(summariesRef);
+
+    if (subjects.length > 0) {
+      q = query(q, where("Subject", "in", subjects));
+    }
+
+    if (language) {
+      q = query(q, where("Language", "==", language));
+    }
+
+    if (startDate && endDate) {
+      q = query(
+        q,
+        where("Date", ">=", Timestamp.fromDate(new Date(startDate)))
+      );
+      q = query(q, where("Date", "<=", Timestamp.fromDate(new Date(endDate))));
+    }
+
+    const querySnapshot = await getDocs(q);
+    const summaries = [];
+    querySnapshot.forEach((doc) => {
+      summaries.push({ id: doc.id, ...doc.data() });
+    });
+
+    return summaries;
+  } catch (error) {
+    console.error("Error getting summaries: ", error);
     throw error;
   }
 };

@@ -9,6 +9,7 @@ import {
   Button,
   Dimensions,
 } from "react-native";
+import { Entypo } from "@expo/vector-icons";
 import React, { useContext, useEffect, useState, useCallback } from "react";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import ModalDropdown from "react-native-modal-dropdown";
@@ -21,11 +22,14 @@ import {
   fetchSummaryFromFirestore,
   removeSummaryFromFirestore,
   getDistinctSubjectsFromFirestore,
+  saveOrUpdateSummaryToFirestore,
+  getSummariesFromFirestore,
 } from "../../api/api";
 import { MyContext } from "../../hooks/MyContext";
 import { BlurView } from "@react-native-community/blur";
+import DropdownPicker from "../assets/DropdownPicker";
 
-const screenHeigh = Dimensions.get("window").height;
+const screenHeight = Dimensions.get("window").height;
 
 const ChatRoom = () => {
   const { userEmail } = useContext(MyContext);
@@ -36,11 +40,11 @@ const ChatRoom = () => {
     datePickerMode: null, // null, 'start', or 'end'
     startDate: new Date(),
     endDate: new Date(),
-    selectedSubject: null,
-    selectedLanguage: "",
+    selectedSubject: [], // Changed to empty array
     summaries: [],
-    subjects: [], // Changed from static array to state
-    languages: ["English", "Spanish", "French"], // Static list of languages
+    subjects: [],
+    selectedLanguage: "",
+    languages: ["English", "Thai", "Khmer", "French"],
   });
 
   const fetchChatRoomsData = useCallback(async () => {
@@ -74,8 +78,6 @@ const ChatRoom = () => {
         setState((prevState) => ({
           ...prevState,
           subjects: subjectsList,
-          // Only update selectedSubject if it's null (no prior selection)
-          selectedSubject: prevState.selectedSubject || subjectsList[0] || null,
         }));
       } catch (error) {
         console.error("Error fetching distinct subjects: ", error);
@@ -83,6 +85,13 @@ const ChatRoom = () => {
     };
     fetchSubjects();
   }, [userEmail]);
+
+  const handleLanguageSelect = (index, value) => {
+    setState((prevState) => ({
+      ...prevState,
+      selectedLanguage: value,
+    }));
+  };
 
   const handleCreateANewChatRoom = () => {
     if (!userEmail) {
@@ -105,7 +114,7 @@ const ChatRoom = () => {
   };
 
   const handleSaveChatRoom = async () => {
-    if (!state.selectedSubject || !state.selectedLanguage) {
+    if (state.selectedSubject.length === 0 || !state.selectedLanguage) {
       Alert.alert("Error", "Please select all required fields.");
       return;
     }
@@ -119,26 +128,27 @@ const ChatRoom = () => {
       await createNewChatRoom(userDocRef, newChatRoomCount);
       await updateChatRoomCount(userDocRef, newChatRoomCount);
 
-      setState((prevState) => ({
-        ...prevState,
-        currentChatRoomCount: newChatRoomCount,
-        modalVisible: false,
-      }));
-
-      // Fetch summaries based on user selection
-      const summariesData = await fetchSummaryFromFirestore(
+      const summariesData = await getSummariesFromFirestore(
         userEmail,
         state.selectedSubject,
         state.selectedLanguage,
         state.startDate,
         state.endDate
       );
+
       setState((prevState) => ({
         ...prevState,
+        currentChatRoomCount: newChatRoomCount,
+        modalVisible: false,
         summaries: summariesData,
       }));
 
-      Alert.alert("Success", `New chat room created successfully!`);
+      console.log("Selected Subject:", state.selectedSubject);
+      console.log("Selected Language:", state.selectedLanguage);
+      console.log("Start Date:", state.startDate);
+      console.log("End Date:", state.endDate);
+
+      Alert.alert("Success", "New chat room created and summaries fetched!");
     } catch (error) {
       console.error("Error creating chat room:", error);
       Alert.alert("Error", "Failed to create a new chat room.");
@@ -194,116 +204,120 @@ const ChatRoom = () => {
 
       <Modal
         visible={state.modalVisible}
-        animationType="slide"
+        animationType="fade"
         transparent={true}>
         <View style={styles.absolute}>
           <BlurView style={styles.absolute} blurType="light" blurAmount={10} />
-          <View style={styles.modalContainer}>
-            <Text>Select Subject</Text>
-            {/* <View style={styles.dropdownContainer}>
-              <ModalDropdown
-                options={state.subjects}
-                onSelect={(index, value) =>
+          <View style={styles.centeredView}>
+            <View style={styles.modalContainer}>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() =>
                   setState((prevState) => ({
                     ...prevState,
-                    selectedSubject: value,
+                    modalVisible: false,
                   }))
-                }
-                defaultValue="Select Subject"
-                style={styles.dropdown}
-                textStyle={styles.dropdownText}
-                dropdownStyle={styles.dropdownDropdown}
-              />
-            </View> */}
-            <View style={styles.dropdownContainer}>
-              <ModalDropdown
-                key={state.subjects.join(",")} // Add a key that changes with subjects array
-                options={state.subjects}
-                onSelect={(index, value) =>
-                  setState((prevState) => ({
-                    ...prevState,
-                    selectedSubject: value,
-                  }))
-                }
-                defaultValue={state.selectedSubject || "Select Subject"} // Set defaultValue
-                style={styles.dropdown}
-                textStyle={styles.dropdownText}
-                dropdownStyle={styles.dropdownDropdown}
-              />
+                }>
+                <Entypo name="cross" size={24} color="black" />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Create New Chat Room</Text>
+              <View style={styles.modalContent}>
+                <Text style={styles.label}>Select Subject</Text>
+                <View style={styles.dropdownContainer}>
+                  <DropdownPicker
+                    options={state.subjects.map((subject) => ({
+                      label: subject,
+                      value: subject,
+                    }))}
+                    onSelect={(value) =>
+                      setState((prevState) => ({
+                        ...prevState,
+                        selectedSubject: value,
+                      }))
+                    }
+                    defaultValue={["Choose your subject"]}
+                  />
+                  {state.selectedSubject.length === 0 ? (
+                    <Text style={styles.placeholderText}>
+                      Please select subject
+                    </Text>
+                  ) : (
+                    <View style={{ paddingTop: 10 }}>
+                      <Text
+                        style={{
+                          fontSize: 18,
+                          textDecorationLine: "underline",
+                        }}>
+                        Your selected subjects:
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 18,
+                          fontWeight: "bold",
+                          paddingTop: 10,
+                        }}>
+                        {state.selectedSubject.slice(1).join(", ")}
+                      </Text>
+                    </View> // Display selected subjects
+                  )}
+                </View>
+                <Text style={styles.label}>Select Language</Text>
+                <View style={styles.dropdownContainer}>
+                  <ModalDropdown
+                    options={state.languages}
+                    onSelect={handleLanguageSelect}
+                    style={styles.dropdown}
+                    textStyle={styles.dropdownText}
+                    dropdownStyle={styles.dropdownDropdown}
+                    dropdownTextStyle={styles.dropdownItemText}
+                  />
+                </View>
+                <View style={styles.dateTimePickerContainer}>
+                  <Text style={styles.label}>Start Date</Text>
+                  <Button
+                    title={state.startDate.toDateString()}
+                    onPress={() =>
+                      setState((prevState) => ({
+                        ...prevState,
+                        datePickerMode: "start",
+                      }))
+                    }
+                  />
+                </View>
+                <View style={styles.dateTimePickerContainer}>
+                  <Text style={styles.label}>End Date</Text>
+                  <Button
+                    title={state.endDate.toDateString()}
+                    onPress={() =>
+                      setState((prevState) => ({
+                        ...prevState,
+                        datePickerMode: "end",
+                      }))
+                    }
+                  />
+                </View>
+                {state.datePickerMode && (
+                  <DateTimePicker
+                    value={
+                      state.datePickerMode === "start"
+                        ? state.startDate
+                        : state.endDate
+                    }
+                    mode="date"
+                    display="default"
+                    onChange={handleDateChange}
+                  />
+                )}
+                <Button
+                  title="Save Chat Room"
+                  onPress={handleSaveChatRoom}
+                  style={styles.saveButton}
+                />
+              </View>
             </View>
-            <Text>Select Language</Text>
-            <View style={styles.dropdownContainer}>
-              <ModalDropdown
-                options={state.languages}
-                onSelect={(index, value) =>
-                  setState((prevState) => ({
-                    ...prevState,
-                    selectedLanguage: value,
-                  }))
-                }
-                defaultValue="Select Language"
-                style={styles.dropdown}
-                textStyle={styles.dropdownText}
-                dropdownStyle={styles.dropdownDropdown}
-              />
-            </View>
-            <Text>Select Start Date</Text>
-            <TouchableOpacity
-              onPress={() =>
-                setState((prevState) => ({
-                  ...prevState,
-                  datePickerMode: "start",
-                }))
-              }>
-              <Text>{state.startDate.toDateString()}</Text>
-            </TouchableOpacity>
-            <Text>Select End Date</Text>
-            <TouchableOpacity
-              onPress={() =>
-                setState((prevState) => ({
-                  ...prevState,
-                  datePickerMode: "end",
-                }))
-              }>
-              <Text>{state.endDate.toDateString()}</Text>
-            </TouchableOpacity>
-            {state.datePickerMode && (
-              <DateTimePicker
-                value={
-                  state.datePickerMode === "start"
-                    ? state.startDate
-                    : state.endDate
-                }
-                mode="date"
-                display="default"
-                onChange={handleDateChange}
-              />
-            )}
-            <Button title="Save" onPress={handleSaveChatRoom} />
-            <Button
-              title="Close"
-              onPress={() =>
-                setState((prevState) => ({
-                  ...prevState,
-                  modalVisible: false,
-                }))
-              }
-            />
           </View>
         </View>
       </Modal>
-
-      <View style={styles.summariesContainer}>
-        {state.summaries.map((summary, index) => (
-          <View key={index} style={styles.summaryItem}>
-            <Text>{summary.text}</Text>
-            <Button
-              title="Remove"
-              onPress={() => handleRemoveSummary(summary.id)}
-            />
-          </View>
-        ))}
-      </View>
     </ScrollView>
   );
 };
@@ -313,45 +327,80 @@ export default ChatRoom;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 16,
+  },
+  absolute: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    right: 0,
+  },
+  centeredView: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContainer: {
-    height: screenHeigh / 2,
     width: "80%",
-    padding: 20,
-    justifyContent: "center",
     backgroundColor: "white",
-    borderRadius: 10,
-    marginHorizontal: 20,
+    borderRadius: 20,
+    padding: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  closeButton: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 16,
+  },
+  modalContent: {
+    width: "100%",
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 8,
   },
   dropdownContainer: {
-    marginVertical: 10,
-    width: "100%",
-    maxHeight: 200,
+    marginBottom: 16,
   },
   dropdown: {
-    marginVertical: 10,
-    padding: 10,
-    borderWidth: 1,
-    borderRadius: 5,
     width: "100%",
+    padding: 12,
+    borderWidth: 1,
+    borderRadius: 4,
+    borderColor: "#ccc",
+    backgroundColor: "white",
   },
   dropdownText: {
     fontSize: 16,
   },
   dropdownDropdown: {
     width: "100%",
-    height: 200,
+    borderWidth: 1,
+    borderColor: "#ccc",
   },
-  summariesContainer: {
-    padding: 20,
+  dropdownItemText: {
+    fontSize: 16,
+    padding: 12,
   },
-  summaryItem: {
-    marginVertical: 10,
+  dateTimePickerContainer: {
+    marginBottom: 16,
   },
-  absolute: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
+  saveButton: {
+    marginTop: 16,
   },
 });

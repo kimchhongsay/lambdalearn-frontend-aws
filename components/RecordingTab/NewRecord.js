@@ -19,6 +19,7 @@ import {
 import AudioRecorderPlayer from "react-native-audio-recorder-player";
 import ModalDropdown from "react-native-modal-dropdown";
 import { MyContext } from "../../hooks/MyContext";
+import { BlurView } from "@react-native-community/blur";
 
 const audioRecorderPlayer = new AudioRecorderPlayer();
 const screenWidth = Dimensions.get("window").width;
@@ -33,9 +34,7 @@ const requestPermission = async (permissionType, title, message) => {
       buttonPositive: "OK",
     });
 
-    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-      // console.log(`${title} granted`);
-    } else {
+    if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
       console.log(`${title} not granted`);
       Alert.alert("Permission Denied", `${title} is required to proceed.`);
       throw new Error(`${title} not granted`);
@@ -87,7 +86,6 @@ const NewRecord = ({ visible, onClose }) => {
           "Storage Permission",
           "This app needs access to your storage to read recorded audio files."
         );
-        // console.log("All permissions granted");
       } catch (err) {
         console.error("Permission request error:", err);
       }
@@ -105,7 +103,6 @@ const NewRecord = ({ visible, onClose }) => {
       });
       setIsRecording(true);
       setIsPaused(false);
-      // console.log("Recording started:", result);
     } catch (error) {
       console.error("Failed to start recording", error);
     }
@@ -116,7 +113,6 @@ const NewRecord = ({ visible, onClose }) => {
       const result = await audioRecorderPlayer.stopRecorder();
       audioRecorderPlayer.removeRecordBackListener();
       setIsRecording(false);
-      // console.log("Recording stopped:", result);
       saveRecordedFile(result);
     } catch (error) {
       console.error("Failed to stop recording", error);
@@ -126,7 +122,7 @@ const NewRecord = ({ visible, onClose }) => {
   const generateFilename = (subject, title, datetime, userEmail) => {
     const sanitizedSubject = subject.replace(/\s+/g, "_");
     const sanitizedTitle = title.replace(/\s+/g, "_");
-    const sanitizedEmail = userEmail.replace(/[@.]/g, "_"); // Sanitize email
+    const sanitizedEmail = userEmail.replace(/[@.]/g, "_");
     return `${sanitizedSubject}-${sanitizedTitle}-${datetime}-${sanitizedEmail}.mp3`;
   };
 
@@ -196,8 +192,6 @@ const NewRecord = ({ visible, onClose }) => {
         const file = result.assets[0];
         setSelectedFile(file);
         setRecordName(file.name.split(".")[0]);
-        // Log the original file path
-        console.log("Selected file path:", file.uri);
       } else {
         console.log("Document picker cancelled or failed:", result);
       }
@@ -226,9 +220,6 @@ const NewRecord = ({ visible, onClose }) => {
     const destinationUri = `${FileSystem.documentDirectory}${filename}`;
 
     try {
-      console.log("Copying from:", selectedFile.uri);
-      console.log("Copying to:", destinationUri);
-
       await FileSystem.copyAsync({
         from: selectedFile.uri,
         to: destinationUri,
@@ -282,7 +273,7 @@ const NewRecord = ({ visible, onClose }) => {
     }
   };
 
-  const handleSubjectSelect = (index, value) => {
+  const handleSubjectSelect = (value) => {
     setSelectedSubject(value);
     if (value !== "Other") {
       setOtherSubject("");
@@ -295,107 +286,107 @@ const NewRecord = ({ visible, onClose }) => {
   };
 
   return (
-    <Modal visible={visible} transparent={true} onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent={true}
+      onRequestClose={onClose}
+      animationType="fade">
+      <BlurView style={styles.absolute} blurType="light" blurAmount={10} />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.overlay}>
-        <View style={styles.container}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Entypo name="cross" size={24} color="black" />
-          </TouchableOpacity>
-          <Text style={styles.title}>New Recording</Text>
+        style={styles.container}>
+        <View style={styles.modalView}>
+          <View style={styles.titleContainer}>
+            <Text style={styles.modalTitle}>Record Audio</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Entypo name="cross" size={24} color="black" />
+            </TouchableOpacity>
+          </View>
 
           <TextInput
             style={styles.textInput}
-            placeholder="Enter recording name"
+            placeholder="Enter a title for your recording"
             value={recordName}
-            onChangeText={setRecordName}
+            onChangeText={(text) => setRecordName(text)}
           />
-
-          <Text style={{ marginTop: 15, fontSize: 16 }}>Subject:</Text>
 
           <ModalDropdown
             options={subjects}
-            onSelect={handleSubjectSelect}
+            defaultValue="Select Subject"
             style={styles.dropdown}
             textStyle={styles.dropdownText}
-            dropdownStyle={styles.dropdownDropdown}
-            dropdownTextStyle={styles.dropdownItemText}
-            defaultIndex={0}
-            defaultValue="Choose audio subject"
+            dropdownStyle={styles.dropdownOptions}
+            onSelect={(index, value) => handleSubjectSelect(value)}
           />
 
           {selectedSubject === "Other" && (
             <TextInput
               style={styles.textInput}
-              placeholder="Enter subject"
+              placeholder="Enter subject name"
               value={otherSubject}
-              onChangeText={setOtherSubject}
+              onChangeText={(text) => setOtherSubject(text)}
             />
           )}
 
+          <Text style={styles.recordTime}>{recordTime}</Text>
+
+          <View style={styles.buttonContainer}>
+            {isRecording ? (
+              <>
+                {isPaused ? (
+                  <TouchableOpacity
+                    style={styles.resumeButton}
+                    onPress={onResumeRecord}>
+                    <Text style={styles.buttonText}>Resume</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.pauseButton}
+                    onPress={onPauseRecord}>
+                    <Text style={styles.buttonText}>Pause</Text>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  style={styles.stopButton}
+                  onPress={onStopRecord}>
+                  <Text style={styles.buttonText}>Stop</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity
+                style={styles.recordButton}
+                onPress={onStartRecord}>
+                <Text style={styles.buttonText}>Record</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <Text style={styles.separator}>OR</Text>
+
           {selectedFile ? (
-            <TouchableOpacity onPress={handleUnselectedAudioImport}>
-              <Text style={{ fontSize: 16, marginBottom: 10 }}>
-                Selected File:
+            <View style={styles.selectedFileContainer}>
+              <Text style={styles.selectedFileText}>
+                Selected File: {selectedFile.name}
               </Text>
-              <Text
-                style={{
-                  fontStyle: "italic",
-                  fontSize: 16,
-                  padding: 10,
-                  borderRadius: 5,
-                  backgroundColor: "#d3d3d379",
-                }}>
-                {selectedFile.name}
-              </Text>
-            </TouchableOpacity>
+              <TouchableOpacity onPress={handleUnselectedAudioImport}>
+                <Text style={styles.unselectText}>Unselect</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <TouchableOpacity
               style={styles.importButton}
               onPress={handleFileSelect}>
-              <Text style={{ color: "red", fontStyle: "italic" }}>
-                *** Import audio ***
-              </Text>
+              <Text style={styles.buttonText}>Import Audio File</Text>
             </TouchableOpacity>
           )}
 
-          {selectedFile !== null && (
+          {selectedFile && (
             <TouchableOpacity
-              style={styles.button}
-              onPress={selectedFile ? handleImportRecord : handleFileSelect}>
-              <Text style={styles.buttonText}>Import to device</Text>
+              style={styles.importButton}
+              onPress={handleImportRecord}>
+              <Text style={styles.buttonText}>Save Imported Audio</Text>
             </TouchableOpacity>
-          )}
-
-          {!selectedFile && (
-            <>
-              <Text style={styles.recordTime}>{recordTime}</Text>
-
-              {isRecording && !isPaused && (
-                <TouchableOpacity
-                  style={[styles.button, styles.pauseButton]}
-                  onPress={onPauseRecord}>
-                  <Text style={styles.buttonText}>Pause Recording</Text>
-                </TouchableOpacity>
-              )}
-
-              {isPaused && (
-                <TouchableOpacity
-                  style={[styles.button, styles.resumeButton]}
-                  onPress={onResumeRecord}>
-                  <Text style={styles.buttonText}>Resume Recording</Text>
-                </TouchableOpacity>
-              )}
-
-              <TouchableOpacity
-                style={styles.button}
-                onPress={isRecording ? onStopRecord : onStartRecord}>
-                <Text style={styles.buttonText}>
-                  {isRecording ? "Stop Recording" : "Start Recording"}
-                </Text>
-              </TouchableOpacity>
-            </>
           )}
         </View>
       </KeyboardAvoidingView>
@@ -404,87 +395,117 @@ const NewRecord = ({ visible, onClose }) => {
 };
 
 const styles = StyleSheet.create({
-  overlay: {
+  absolute: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    right: 0,
+  },
+  container: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
-  container: {
-    width: screenWidth * 0.8,
+  modalView: {
     backgroundColor: "white",
+    borderRadius: 20,
     padding: 20,
-    borderRadius: 8,
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    width: screenWidth * 0.9,
   },
-  closeButton: {
-    position: "absolute",
-    top: 10,
-    right: 10,
+  titleContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
   },
-  title: {
-    marginTop: 14,
-    fontSize: 20,
+  modalTitle: {
+    fontSize: 18,
     fontWeight: "bold",
   },
   textInput: {
-    width: screenWidth * 0.7,
     height: 40,
     borderColor: "gray",
     borderWidth: 1,
-    marginTop: 10,
-    paddingLeft: 10,
     borderRadius: 5,
+    paddingHorizontal: 10,
+    marginTop: 10,
+    width: "100%",
   },
   dropdown: {
-    height: 60,
-    justifyContent: "center",
-    alignItems: "center",
-    marginVertical: 10,
+    width: "100%",
+    marginTop: 10,
   },
   dropdownText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    textDecorationLine: "underline",
-  },
-  dropdownItemText: {
     fontSize: 16,
   },
-  dropdownDropdown: {
-    width: screenWidth * 0.6,
-    padding: 16,
+  dropdownOptions: {
+    width: screenWidth * 0.8,
   },
   recordTime: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: "bold",
-    marginTop: 10,
+    marginVertical: 10,
   },
-  button: {
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
     width: "100%",
-    padding: 10,
-    backgroundColor: "#b80000ff",
-    borderRadius: 5,
-    marginTop: 10,
-    alignItems: "center",
   },
-  importButton: {
-    marginTop: 15,
-    alignItems: "center",
-    justifyContent: "center",
+  recordButton: {
+    backgroundColor: "red",
     padding: 10,
     borderRadius: 5,
-    borderWidth: 1,
-    borderColor: "#000000",
+  },
+  stopButton: {
+    backgroundColor: "gray",
+    padding: 10,
+    borderRadius: 5,
   },
   pauseButton: {
-    backgroundColor: "#f5a623",
+    backgroundColor: "orange",
+    padding: 10,
+    borderRadius: 5,
   },
   resumeButton: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "green",
+    padding: 10,
+    borderRadius: 5,
   },
   buttonText: {
     color: "white",
+    fontWeight: "bold",
+  },
+  separator: {
+    marginVertical: 20,
     fontSize: 16,
+    fontWeight: "bold",
+  },
+  selectedFileContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+  },
+  selectedFileText: {
+    fontSize: 16,
+  },
+  unselectText: {
+    color: "red",
+  },
+  importButton: {
+    backgroundColor: "blue",
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 10,
   },
 });
 

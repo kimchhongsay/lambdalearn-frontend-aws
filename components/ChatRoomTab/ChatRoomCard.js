@@ -1,40 +1,113 @@
-import React from "react";
-import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
+import React, { useRef } from "react";
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  Animated,
+  PanResponder,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { Entypo } from "@expo/vector-icons";
 
-const ChatRoomCard = ({ chatRoom, onPress }) => {
+const ChatRoomCard = ({ chatRoom, onPress, onDelete }) => {
+  const swipeAnim = useRef(new Animated.Value(0)).current;
+
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderMove: (_, gestureState) => {
+      if (gestureState.dx < 0) {
+        swipeAnim.setValue(gestureState.dx);
+      }
+    },
+    onPanResponderRelease: (_, gestureState) => {
+      if (gestureState.dx < -50) {
+        Animated.spring(swipeAnim, {
+          toValue: -75,
+          useNativeDriver: false,
+        }).start();
+      } else {
+        Animated.spring(swipeAnim, {
+          toValue: 0,
+          useNativeDriver: false,
+        }).start();
+      }
+    },
+  });
+
+  const handleDeletePress = () => {
+    onDelete(chatRoom.chatRoomId);
+  };
+
   return (
-    <TouchableOpacity style={styles.card} onPress={() => onPress(chatRoom)}>
-      <LinearGradient
-        // colors={["#2196F3", "#1976D2"]}
-        colors={["#FCB69F", "#FFECD2"]}
-        style={styles.gradientOverlay}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}>
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.subject}>{chatRoom.subjects.join(", ")}</Text>
-            <Text style={styles.createdAt}>{chatRoom.createdAt}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.language}>{chatRoom.language}</Text>
-            <View style={styles.dateContainer}>
-              <Text style={styles.dateText}>
-                {chatRoom.startDate} - {chatRoom.endDate}
-              </Text>
+    <View style={styles.cardContainer}>
+      <Animated.View
+        style={[
+          styles.card,
+          {
+            transform: [
+              {
+                translateX: swipeAnim,
+              },
+            ],
+          },
+        ]}
+        {...panResponder.panHandlers}>
+        <TouchableOpacity onPress={() => onPress(chatRoom)}>
+          <LinearGradient
+            colors={["#FCB69F", "#FFECD2"]}
+            style={styles.gradientOverlay}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}>
+            <View style={styles.content}>
+              <View style={styles.header}>
+                <Text style={styles.subject}>
+                  {chatRoom.subjects.join(", ")}
+                </Text>
+                <Text style={styles.createdAt}>{chatRoom.createdAt}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.language}>{chatRoom.language}</Text>
+                <View style={styles.dateContainer}>
+                  <Text style={styles.dateText}>
+                    {chatRoom.startDate} - {chatRoom.endDate}
+                  </Text>
+                </View>
+              </View>
             </View>
-          </View>
-        </View>
-      </LinearGradient>
-    </TouchableOpacity>
+          </LinearGradient>
+        </TouchableOpacity>
+      </Animated.View>
+      <Animated.View
+        style={[
+          styles.deleteButtonContainer,
+          {
+            opacity: swipeAnim.interpolate({
+              inputRange: [-75, 0],
+              outputRange: [1, 0],
+              extrapolate: "clamp",
+            }),
+          },
+        ]}>
+        <TouchableOpacity onPress={handleDeletePress}>
+          <Entypo name="trash" size={24} color="white" />
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 12, // Increased border radius for a softer look
+  cardContainer: {
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 15,
-    overflow: "hidden", // Ensures the gradient doesn't overflow the rounded corners
+  },
+  card: {
+    width: "100%",
+    borderRadius: 12,
+    overflow: "hidden",
   },
   gradientOverlay: {
     padding: 15,
@@ -76,6 +149,17 @@ const styles = StyleSheet.create({
   createdAt: {
     fontSize: 12,
     color: "#888",
+  },
+  deleteButtonContainer: {
+    backgroundColor: "red",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 75,
+    height: "100%",
+    position: "absolute",
+    right: 0,
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
   },
 });
 

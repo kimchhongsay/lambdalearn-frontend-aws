@@ -10,6 +10,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  PanResponder,
+  Animated,
 } from "react-native";
 import ModalDropdown from "react-native-modal-dropdown";
 import {
@@ -19,6 +21,7 @@ import {
   getDistinctSubjectsFromFirestore,
   getUserDocRef,
   removeSummaryFromFirestore,
+  deleteChatRoom,
 } from "../../api/api";
 import { MyContext } from "../../hooks/MyContext";
 import DropdownPicker from "../assets/DropdownPicker";
@@ -57,14 +60,41 @@ const ChatRoom = () => {
     return `${month}/${day}/${year}`;
   };
 
+  // Function to handle fetching chat room data
   const fetchChatRoomsData = useCallback(async () => {
     try {
       const userDocRef = getUserDocRef(userEmail);
       const chatRooms = await fetchChatRoom(userDocRef);
 
-      // Convert startDate and endDate to Date objects
       const formattedChatRooms = chatRooms.map((chatRoom) => ({
         ...chatRoom,
+        swipeValue: new Animated.Value(0),
+        panResponder: PanResponder.create({
+          onStartShouldSetPanResponder: () => true,
+          onMoveShouldSetPanResponder: () => true,
+          onPanResponderMove: (event, gestureState) => {
+            if (gestureState.dx < 0) {
+              setState((prevState) => {
+                const updatedChatRooms = prevState.chatRoomsData.map((cr) => {
+                  if (cr.chatRoomId === chatRoom.chatRoomId) {
+                    cr.swipeValue.setValue(gestureState.dx);
+                  }
+                  return cr;
+                });
+                return {
+                  ...prevState,
+                  chatRoomsData: updatedChatRooms,
+                };
+              });
+            }
+          },
+          onPanResponderRelease: (event, gestureState) => {
+            Animated.spring(chatRoom.swipeValue, {
+              toValue: 0,
+              useNativeDriver: true,
+            }).start();
+          },
+        }),
         startDate: formatTimestamp(chatRoom.startDate),
         endDate: formatTimestamp(chatRoom.endDate),
         createdAt: formatTimestamp(chatRoom.createdAt),
@@ -79,11 +109,40 @@ const ChatRoom = () => {
     }
   }, [userEmail]);
 
+  useEffect(() => {
+    fetchChatRoomsData();
+  }, [fetchChatRoomsData]);
+
   const handleLanguageSelect = (index, value) => {
     setState((prevState) => ({
       ...prevState,
       selectedLanguage: value,
     }));
+  };
+
+  // Function to handle when the delete button is pressed in ChatRoomCard
+  const handleDelete = async (chatRoomId) => {
+    if (!userEmail || !chatRoomId) {
+      Alert.alert("Error", "Invalid user email or chat room ID.");
+      return;
+    }
+
+    try {
+      await deleteChatRoom(userEmail, chatRoomId);
+
+      setState((prevState) => ({
+        ...prevState,
+        chatRoomsData: prevState.chatRoomsData.filter(
+          (chatRoom) => chatRoom.chatRoomId !== chatRoomId
+        ),
+      }));
+
+      Alert.alert("Success", "Chat room deleted successfully!");
+      incrementRefreshKey();
+    } catch (error) {
+      console.error("Error deleting chat room:", error);
+      Alert.alert("Error", "Failed to delete chat room. Please try again.");
+    }
   };
 
   const handleCreateANewChatRoom = () => {
@@ -172,10 +231,6 @@ const ChatRoom = () => {
     });
   };
 
-  useEffect(() => {
-    fetchChatRoomsData();
-  }, [fetchChatRoomsData, state.selectedSubject]);
-
   const convertTimestampToDate = (timestamp) => {
     return new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
   };
@@ -218,24 +273,25 @@ const ChatRoom = () => {
 
   return (
     <View style={styles.container} key={refreshKey}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.createNewButton}
-          onPress={handleCreateANewChatRoom}>
-          <Text style={styles.createNewButtonText}>Create Chat</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        style={styles.createNewButton}
+        onPress={handleCreateANewChatRoom}>
+        <Text style={styles.createNewButtonText}>Create New Chat Room</Text>
+      </TouchableOpacity>
+
       <ScrollView style={styles.chatRoomList} key={refreshKey}>
         {state.chatRoomsData.map((chatRoom, index) => (
           <ChatRoomCard
             key={index}
             chatRoom={chatRoom}
+            onDelete={handleDelete}
             onPress={() => {
               console.log("Chat room pressed:", chatRoom);
             }}
           />
         ))}
       </ScrollView>
+
       <Modal
         visible={state.modalVisible}
         animationType="fade"
@@ -424,14 +480,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   createNewButton: {
-    backgroundColor: "#2196F3",
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 5,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderStyle: "dashed",
   },
   createNewButtonText: {
-    color: "white",
+    color: "#c5c5c5",
+    textAlign: "center",
     fontSize: 16,
+    fontWeight: "400",
   },
 
   // Chat Room List Styles

@@ -11,6 +11,7 @@ import {
   Timestamp,
   updateDoc,
   where,
+  orderBy,
 } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 
@@ -135,35 +136,33 @@ const getUserDocSnap = async (userDocRef) => {
 
 const fetchChatRoom = async (userDocRef) => {
   const chatRoomsRef = collection(userDocRef, "chatrooms");
-  const chatRoomsSnapshot = await getDocs(chatRoomsRef);
+
+  // Create a query to order by 'createdAt' in descending order
+  const q = query(chatRoomsRef, orderBy("createdAt", "desc"));
+
+  const chatRoomsSnapshot = await getDocs(q);
 
   const chatRoomsData = chatRoomsSnapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
   }));
 
-  // chatRoomsData.forEach((chatRoom) => {
-  //   const createdAt = new Date(chatRoom.createdAt.seconds * 1000);
-  //   const SummarizeEndDate = new Date(chatRoom.endDate.seconds * 1000);
-  //   const SummarizeStartDate = new Date(chatRoom.startDate.seconds * 1000);
+  // Uncomment and adjust the following block to process or log the chat room data if needed
+  /*
+  chatRoomsData.forEach((chatRoom) => {
+    const createdAt = new Date(chatRoom.createdAt.seconds * 1000);
+    const SummarizeEndDate = new Date(chatRoom.endDate.seconds * 1000);
+    const SummarizeStartDate = new Date(chatRoom.startDate.seconds * 1000);
 
-  //   console.log("Chat Room ID:", chatRoom.chatRoomId);
-  //   console.log(
-  //     "Created At:",
-  //     createdAt.toLocaleDateString() // Format as date only
-  //   );
-  //   console.log(
-  //     "End Date:",
-  //     SummarizeEndDate.toLocaleDateString() // Format as date only
-  //   );
-  //   console.log("Language:", chatRoom.language);
-  //   console.log(
-  //     "Start Date:",
-  //     SummarizeStartDate.toLocaleDateString() // Format as date only
-  //   );
-  //   console.log("Subjects:", chatRoom.subjects.join(", "));
-  //   console.log("User Docs:", chatRoom.userDocs);
-  // });
+    console.log("Chat Room ID:", chatRoom.chatRoomId);
+    console.log("Created At:", createdAt.toLocaleDateString()); // Format as date only
+    console.log("End Date:", SummarizeEndDate.toLocaleDateString()); // Format as date only
+    console.log("Language:", chatRoom.language);
+    console.log("Start Date:", SummarizeStartDate.toLocaleDateString()); // Format as date only
+    console.log("Subjects:", chatRoom.subjects.join(", "));
+    console.log("User Docs:", chatRoom.userDocs);
+  });
+  */
 
   return chatRoomsData;
 };
@@ -341,6 +340,19 @@ const createChatRoom = async (
     throw error;
   }
 };
+// Assuming this is the deleteChatRoom function
+const deleteChatRoom = async (userEmail, chatRoomId) => {
+  try {
+    const userDocRef = getUserDocRef(userEmail);
+    const chatRoomRef = doc(userDocRef, "chatrooms", chatRoomId); // Ensure this path is correct
+
+    await deleteDoc(chatRoomRef);
+    console.log("Chat room deleted successfully!");
+  } catch (error) {
+    console.error("Error deleting chat room:", error);
+    throw error;
+  }
+};
 
 export {
   createChatRoom,
@@ -359,4 +371,5 @@ export {
   summarizeTranscript,
   transcriptAudio,
   translateText,
+  deleteChatRoom,
 };

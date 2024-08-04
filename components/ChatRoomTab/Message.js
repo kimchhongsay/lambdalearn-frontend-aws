@@ -20,7 +20,7 @@ const Message = ({ item, botAvatar, userAvatar }) => {
         styles.messageContainer,
         item.role === "user" ? styles.userMessage : styles.botMessage,
       ]}>
-      {item.role === "bot" && (
+      {item.role === "model" && (
         <>
           <Image source={botAvatar} style={styles.avatar} />
           <View style={styles.messageContent}>

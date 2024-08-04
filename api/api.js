@@ -375,10 +375,10 @@ const deleteChatRoom = async (userEmail, chatRoomId) => {
 };
 
 // Function to send message to FastAPI server
-const sendMessageToServer = async (userDocs, userMessage) => {
+const sendMessageToServer = async (userDocs, historyMessages, userMessage) => {
   const response = await axios.post(
     `${SERVER_URL}/chat`,
-    { userDocs, userMessage },
+    { userDocs, historyMessages, userMessage },
     { headers: { "Content-Type": "application/json" } }
   );
   return response.data.response;
@@ -446,6 +446,40 @@ const listenToMessages = (userEmail, chatRoomId, setMessages) => {
   });
 };
 
+// Function to fetch all messages of a user in a specific chat room
+const fetchMessages = async (userEmail, chatRoomId) => {
+  try {
+    const messagesRef = collection(
+      db,
+      "Users",
+      userEmail,
+      "chatrooms",
+      chatRoomId,
+      "messages"
+    );
+    const q = query(messagesRef, orderBy("timestamp", "asc"));
+
+    const querySnapshot = await getDocs(q);
+    const messages = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    // Extract required fields: role, text, and timestamp
+    const formattedMessages = messages.map((message) => ({
+      role: message.role,
+      text: message.text,
+      // Check if timestamp exists before calling toDate()
+      timestamp: message.timestamp ? message.timestamp.toDate() : null,
+    }));
+
+    return formattedMessages;
+  } catch (error) {
+    console.error("Error fetching messages: ", error);
+    throw error;
+  }
+};
+
 export {
   createChatRoom,
   deleteSummaryFromFirestore,
@@ -467,4 +501,5 @@ export {
   sendMessageToServer,
   addMessageToFirestore,
   listenToMessages,
+  fetchMessages,
 };

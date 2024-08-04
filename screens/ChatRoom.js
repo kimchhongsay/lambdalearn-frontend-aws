@@ -15,6 +15,9 @@ import {
   addMessageToFirestore,
   listenToMessages,
   sendMessageToServer,
+  fetchChatRoom,
+  getUserDocRef,
+  fetchMessages,
 } from "../api/api";
 
 // Import the separate components
@@ -25,9 +28,11 @@ const ChatRoom = ({ route, navigation }) => {
   const { chatRoomName, chatRoomId } = route.params;
   const [messageText, setMessageText] = useState("");
   const [messages, setMessages] = useState([]);
+  const [historyMessages, setHistoryMessages] = useState([]);
   const flatListRef = useRef(null);
   const userData = route.params.userInfo;
   const [isLoading, setIsLoading] = useState(false);
+  const [userDocs, setUserDocs] = useState("");
 
   const userAvatar = userData.photoURL;
   const botAvatar = require("../assets/gemini.jpg");
@@ -62,10 +67,79 @@ const ChatRoom = ({ route, navigation }) => {
       chatRoomId,
       setMessages
     );
+
     return () => unsubscribe();
   }, [chatRoomId, userData.email]);
 
+  useEffect(() => {
+    const fetchUserDocs = async () => {
+      try {
+        const userDocRef = getUserDocRef(userData.email, chatRoomId);
+        const chatRoomsData = await fetchChatRoom(userDocRef);
+
+        // Assuming you only want to get `userDocs` from the first chat room
+        if (chatRoomsData.length > 0) {
+          const userDocsData = chatRoomsData[0].userDocs;
+          setUserDocs(userDocsData);
+          // console.log("Chat Rooms: ", userDocs);
+        } else {
+          console.log("No chat rooms found");
+        }
+      } catch (error) {
+        console.error("Error fetching user docs: ", error);
+      }
+    };
+    fetchUserDocs();
+  }, [chatRoomId, userData.email]);
+
+  const getHistoryMessages = async () => {
+    const userEmail = userData.email;
+
+    try {
+      // Fetch messages
+      const response = await fetchMessages(userEmail, chatRoomId);
+
+      // Log the response to ensure it's the expected structure
+      console.log("Fetch Response:", response);
+
+      // Ensure the response is an array
+      if (Array.isArray(response)) {
+        const messagesArray = response;
+
+        // Format the messages
+        const formattedMessages = messagesArray.map((message) => {
+          const formattedTimestamp = new Date(
+            message.timestamp
+          ).toLocaleString();
+
+          // Determine role and format accordingly
+          const role = message.role === "user" ? "user" : "model";
+          const parts =
+            role === "user"
+              ? [`${message.text}, send at ${formattedTimestamp}`]
+              : [`${message.text}, response at ${formattedTimestamp}`];
+
+          return { role, parts };
+        });
+
+        // Set the formatted messages to state
+        setHistoryMessages(formattedMessages);
+      } else {
+        console.error("Unexpected response structure or no data available.");
+      }
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+    }
+  };
+  useEffect(() => {
+    if (chatRoomId && userData.email) {
+      getHistoryMessages();
+    }
+  }, [chatRoomId, userData.email]);
+
   const handleSendMessage = async (messageText) => {
+    console.log("History Message: ", ...historyMessages);
+    console.log("User Docs: ", userDocs);
     if (messageText.trim() === "") return;
 
     const newMessage = {
@@ -79,23 +153,33 @@ const ChatRoom = ({ route, navigation }) => {
     setMessageText(""); // Clear input field
     setIsLoading(true); // Set loading to true when sending message
 
-    const userDocs = ""; // Make sure this is correctly defined
-
     try {
-      await addMessageToFirestore(userData.email, chatRoomId, newMessage);
-      const botResponseText = await sendMessageToServer(userDocs, messageText);
-      if (!botResponseText) {
-        throw new Error("Bot response is undefined");
-      }
+      await addMessageToFirestore(userData.email, chatRoomId, newMessage)
+        .then(() => {
+          // Get the updated history after the message is added
+          getHistoryMessages();
+        })
+        .then(async () => {
+          // Send the message to the server
+          const botResponseText = await sendMessageToServer(
+            userDocs,
+            historyMessages, // Now using the updated history
+            messageText
+          );
 
-      const botMessage = {
-        id: Date.now().toString() + 1,
-        text: botResponseText,
-        role: "bot",
-        timestamp: serverTimestamp(),
-      };
+          if (!botResponseText) {
+            throw new Error("Bot response is undefined");
+          }
 
-      await addMessageToFirestore(userData.email, chatRoomId, botMessage);
+          const botMessage = {
+            id: Date.now().toString() + 1,
+            text: botResponseText,
+            role: "model",
+            timestamp: serverTimestamp(),
+          };
+
+          await addMessageToFirestore(userData.email, chatRoomId, botMessage);
+        });
     } catch (error) {
       console.error("Error during chat:", error);
     } finally {

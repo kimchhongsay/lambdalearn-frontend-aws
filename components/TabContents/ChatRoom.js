@@ -21,7 +21,6 @@ import {
   getDistinctLanguageFromFirestore,
   getDistinctSubjectsFromFirestore,
   getUserDocRef,
-  removeSummaryFromFirestore,
   deleteChatRoom,
 } from "../../api/api";
 import { MyContext } from "../../hooks/MyContext";
@@ -211,22 +210,6 @@ const ChatRoom = () => {
     }
   };
 
-  const handleRemoveSummary = async (summaryId) => {
-    try {
-      await removeSummaryFromFirestore(userEmail, summaryId);
-      setState((prevState) => ({
-        ...prevState,
-        summaries: prevState.summaries.filter(
-          (summary) => summary.id !== summaryId
-        ),
-      }));
-      Alert.alert("Success", "Summary removed successfully!");
-    } catch (error) {
-      console.error("Error removing summary:", error);
-      Alert.alert("Error", "Failed to remove summary.");
-    }
-  };
-
   const handleDateChange = (event, selectedDate) => {
     setState((prevState) => {
       if (selectedDate) {
@@ -242,10 +225,6 @@ const ChatRoom = () => {
       }
       return prevState;
     });
-  };
-
-  const convertTimestampToDate = (timestamp) => {
-    return new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
   };
 
   // Fetch distinct subjects from Firestore when the modal opens

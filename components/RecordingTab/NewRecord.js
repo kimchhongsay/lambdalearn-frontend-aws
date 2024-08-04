@@ -15,6 +15,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  StatusBar,
 } from "react-native";
 import AudioRecorderPlayer from "react-native-audio-recorder-player";
 import ModalDropdown from "react-native-modal-dropdown";
@@ -64,7 +65,7 @@ const NewRecord = ({ visible, onClose }) => {
   const [otherSubject, setOtherSubject] = useState("");
   const [startTime, setStartTime] = useState(0);
   const [selectedFile, setSelectedFile] = useState(null);
-  const { userEmail } = useContext(MyContext);
+  const { userEmail, showToast } = useContext(MyContext);
 
   const subjects = ["Math", "Science", "History", "Language", "Other"];
 
@@ -174,7 +175,14 @@ const NewRecord = ({ visible, onClose }) => {
       );
 
       console.log("Recording saved:", destinationUri);
-      Alert.alert("Success", "Recording saved successfully.");
+      showToast("File imported successfully", {
+        type: "success",
+        placement: "bottom",
+        duration: 4000,
+        topOffset: 30,
+        animationType: "slide-in",
+        style: { marginBottom: 30 },
+      });
       onClose();
     } catch (error) {
       console.error("Failed to save recording:", error);
@@ -246,7 +254,15 @@ const NewRecord = ({ visible, onClose }) => {
       );
 
       console.log("File imported:", destinationUri);
-      Alert.alert("Success", "File imported successfully.");
+      showToast("File imported successfully", {
+        type: "success",
+        placement: "bottom",
+        duration: 4000,
+        topOffset: 30,
+        animationType: "slide-in",
+        style: { marginBottom: 30 },
+      });
+      // Alert.alert("Success", "File imported successfully.");
       setSelectedFile(null);
       onClose();
     } catch (error) {

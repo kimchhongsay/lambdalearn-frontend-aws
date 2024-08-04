@@ -42,7 +42,7 @@ const summarizeLanguageOption = [
 
 const RecordedSummarizeData = ({ route, navigation }) => {
   const { subject, title, duration, datetime, filePath } = route.params;
-  const { userEmail, removeHtmlTags } = useContext(MyContext);
+  const { userEmail, removeHtmlTags, showToast } = useContext(MyContext);
 
   // Get window width using useWindowDimensions
   const { width: windowWidth } = useWindowDimensions();
@@ -291,7 +291,15 @@ const RecordedSummarizeData = ({ route, navigation }) => {
         transcript: state.editableTranscript,
         isEditingTranscript: false,
       }));
-      Alert.alert("Success", "Transcript saved successfully!");
+
+      showToast("Success! Transcript saved successfully!", {
+        type: "success",
+        placement: "bottom",
+        duration: 4000,
+        topOffset: 30,
+        animationType: "slide-in",
+        style: { marginBottom: 30 },
+      });
     } catch (error) {
       Alert.alert("Error", `Failed to save transcript: ${error.message}`);
     }
@@ -319,7 +327,15 @@ const RecordedSummarizeData = ({ route, navigation }) => {
           [language]: false,
         },
       }));
-      Alert.alert("Success", "Summarized text saved successfully!");
+
+      showToast("Success! Summarized text saved successfully!", {
+        type: "success",
+        placement: "bottom",
+        duration: 4000,
+        topOffset: 30,
+        animationType: "slide-in",
+        style: { marginBottom: 30 },
+      });
     } catch (error) {
       Alert.alert("Error", `Failed to save summarized text: ${error.message}`);
     }
@@ -369,7 +385,14 @@ const RecordedSummarizeData = ({ route, navigation }) => {
         };
       });
 
-      Alert.alert("Success", "Summarized text deleted successfully!");
+      showToast("Success! Summarized text deleted successfully!", {
+        type: "danger",
+        placement: "bottom",
+        duration: 4000,
+        topOffset: 30,
+        animationType: "slide-in",
+        style: { marginBottom: 30 },
+      });
     } catch (error) {
       console.error("Error deleting summarized text:", error);
       Alert.alert(

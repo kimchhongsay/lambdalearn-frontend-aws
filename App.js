@@ -12,6 +12,8 @@ import { auth } from "./firebaseConfig";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import RecordedSummarizeData from "./screens/RecordedSummarizeData";
+import ChatRoom from "./screens/ChatRoom";
+import { ToastProvider } from "react-native-toast-notifications";
 
 // Ensure react-native-safe-area-context is installed
 import "react-native-safe-area-context";
@@ -49,6 +51,12 @@ function MainStack({ userInfo }) {
         name="RecordedSummarizeData"
         component={RecordedSummarizeData}
         options={{ title: "Record Details & Summary" }}
+      />
+      <Stack.Screen
+        name="ChatRoom"
+        initialParams={{ userInfo }}
+        component={ChatRoom}
+        options={{ title: "Chat Room" }}
       />
     </Stack.Navigator>
   );
@@ -133,26 +141,28 @@ export default function App() {
   return (
     <NavigationContainer>
       {userInfo ? (
-        <MyProvider>
-          <Drawer.Navigator
-            drawerContent={(props) => (
-              <Sidebar
-                {...props}
-                setUserInfo={setUserInfo}
-                clearData={clearData}
-              />
-            )}>
-            <Drawer.Screen name="Home" options={{ headerShown: false }}>
-              {(props) => (
-                <MainStack
+        <ToastProvider>
+          <MyProvider>
+            <Drawer.Navigator
+              drawerContent={(props) => (
+                <Sidebar
                   {...props}
-                  userInfo={userInfo}
-                  refreshTrigger={refreshTrigger}
+                  setUserInfo={setUserInfo}
+                  clearData={clearData}
                 />
-              )}
-            </Drawer.Screen>
-          </Drawer.Navigator>
-        </MyProvider>
+              )}>
+              <Drawer.Screen name="Home" options={{ headerShown: false }}>
+                {(props) => (
+                  <MainStack
+                    {...props}
+                    userInfo={userInfo}
+                    refreshTrigger={refreshTrigger}
+                  />
+                )}
+              </Drawer.Screen>
+            </Drawer.Navigator>
+          </MyProvider>
+        </ToastProvider>
       ) : (
         <Stack.Navigator>
           <Stack.Screen name="SignIn" options={{ headerShown: false }}>

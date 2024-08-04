@@ -7,11 +7,13 @@ import {
   Animated,
   PanResponder,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Entypo } from "@expo/vector-icons";
 
 const ChatRoomCard = ({ chatRoom, onPress, onDelete }) => {
   const swipeAnim = useRef(new Animated.Value(0)).current;
+  const navigation = useNavigation();
 
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -40,6 +42,13 @@ const ChatRoomCard = ({ chatRoom, onPress, onDelete }) => {
     onDelete(chatRoom.chatRoomId);
   };
 
+  const handleClickChatRoom = () => {
+    navigation.navigate("ChatRoom", {
+      chatRoomName: chatRoom.subjects.join(", "),
+      chatRoomId: chatRoom.chatRoomId,
+    });
+  };
+
   return (
     <View style={styles.cardContainer}>
       <Animated.View
@@ -54,7 +63,7 @@ const ChatRoomCard = ({ chatRoom, onPress, onDelete }) => {
           },
         ]}
         {...panResponder.panHandlers}>
-        <TouchableOpacity onPress={() => onPress(chatRoom)}>
+        <TouchableOpacity onPress={handleClickChatRoom}>
           <LinearGradient
             colors={["#FCB69F", "#FFECD2"]}
             style={styles.gradientOverlay}

@@ -12,13 +12,17 @@ import {
   updateDoc,
   where,
   orderBy,
+  onSnapshot,
+  addDoc,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "../firebaseConfig";
+import { format } from "date-fns";
 
 // _____________________________________________________________________________
 // The following functions are used in the Transcript component in the snippet that use in RecordedSummarizeData.js
 const SERVER_URL =
-  "https://7a84-2001-fb1-148-756-1d57-8a11-5fde-baf0.ngrok-free.app";
+  "https://d94c-2001-fb1-148-756-84-8ad9-8c12-eb53.ngrok-free.app";
 
 const encodedFilePath = (filePath) => {
   return filePath.replace(/\//g, "%2F");
@@ -326,11 +330,6 @@ const createChatRoom = async (
       userDocs: summariesData,
     });
 
-    // Create a 'chat' collection for storing user messages (initially empty)
-    await setDoc(doc(chatRoomRef, "chat", "messages"), {
-      messages: [], // Initialize with an empty array
-    });
-
     return {
       chatRoomId,
       userDocs: summariesData,
@@ -340,18 +339,111 @@ const createChatRoom = async (
     throw error;
   }
 };
+
 // Assuming this is the deleteChatRoom function
+const deleteCollection = async (collectionRef) => {
+  const querySnapshot = await getDocs(collectionRef);
+  const batch = writeBatch(db);
+
+  querySnapshot.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+
+  await batch.commit();
+};
+
 const deleteChatRoom = async (userEmail, chatRoomId) => {
   try {
-    const userDocRef = getUserDocRef(userEmail);
-    const chatRoomRef = doc(userDocRef, "chatrooms", chatRoomId); // Ensure this path is correct
+    const chatRoomRef = doc(db, "Users", userEmail, "chatrooms", chatRoomId);
 
+    // Delete all subcollections within the chat room
+    const subCollections = ["messages"]; // Add any other subcollections here
+
+    for (const subCollection of subCollections) {
+      const subCollectionRef = collection(chatRoomRef, subCollection);
+      await deleteCollection(subCollectionRef);
+    }
+
+    // Delete the chat room document
     await deleteDoc(chatRoomRef);
-    console.log("Chat room deleted successfully!");
+
+    console.log(`Chat room with ID '${chatRoomId}' deleted successfully!`);
   } catch (error) {
     console.error("Error deleting chat room:", error);
     throw error;
   }
+};
+
+// Function to send message to FastAPI server
+const sendMessageToServer = async (userDocs, userMessage) => {
+  const response = await axios.post(
+    `${SERVER_URL}/chat`,
+    { userDocs, userMessage },
+    { headers: { "Content-Type": "application/json" } }
+  );
+  return response.data.response;
+};
+
+// Function to add a message to Firestore
+const addMessageToFirestore = async (userEmail, chatRoomId, message) => {
+  const chatRoomMessagesRef = collection(
+    db,
+    "Users",
+    userEmail,
+    "chatrooms",
+    chatRoomId,
+    "messages"
+  );
+  await addDoc(chatRoomMessagesRef, message);
+};
+
+// Function to set up a real-time listener
+const listenToMessages = (userEmail, chatRoomId, setMessages) => {
+  const messagesSubcollectionRef = collection(
+    db,
+    "Users",
+    userEmail,
+    "chatrooms",
+    chatRoomId,
+    "messages"
+  );
+
+  const messagesQuery = query(
+    messagesSubcollectionRef,
+    orderBy("timestamp", "asc")
+  );
+
+  return onSnapshot(messagesQuery, (snapshot) => {
+    const fetchedMessages = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    const sortedMessagesWithDates = [];
+    let lastDate = null;
+
+    fetchedMessages.forEach((message) => {
+      if (message.timestamp) {
+        const messageDate = format(message.timestamp.toDate(), "dd MMM yyyy");
+
+        if (messageDate !== lastDate) {
+          sortedMessagesWithDates.push({
+            id: `date-${messageDate}`,
+            type: "date",
+            date: messageDate,
+          });
+          lastDate = messageDate;
+        }
+      }
+
+      sortedMessagesWithDates.push({
+        ...message,
+        type: "message",
+      });
+    });
+
+    setMessages(sortedMessagesWithDates);
+  });
 };
 
 export {
@@ -372,4 +464,7 @@ export {
   transcriptAudio,
   translateText,
   deleteChatRoom,
+  sendMessageToServer,
+  addMessageToFirestore,
+  listenToMessages,
 };

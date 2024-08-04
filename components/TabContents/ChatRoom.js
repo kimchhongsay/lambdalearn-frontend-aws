@@ -12,6 +12,7 @@ import {
   View,
   PanResponder,
   Animated,
+  StatusBar,
 } from "react-native";
 import ModalDropdown from "react-native-modal-dropdown";
 import {
@@ -28,7 +29,8 @@ import DropdownPicker from "../assets/DropdownPicker";
 import ChatRoomCard from "../ChatRoomTab/ChatRoomCard";
 
 const ChatRoom = () => {
-  const { userEmail, refreshKey, incrementRefreshKey } = useContext(MyContext);
+  const { userEmail, refreshKey, incrementRefreshKey, showToast } =
+    useContext(MyContext);
   const [state, setState] = useState({
     chatRoomsData: [],
     currentChatRoomCount: 0,
@@ -137,7 +139,14 @@ const ChatRoom = () => {
         ),
       }));
 
-      Alert.alert("Success", "Chat room deleted successfully!");
+      showToast("Chat room deleted successfully!", {
+        type: "danger",
+        placement: "bottom",
+        duration: 4000,
+        topOffset: 30,
+        animationType: "slide-in",
+        style: { marginBottom: 30 },
+      });
       incrementRefreshKey();
     } catch (error) {
       console.error("Error deleting chat room:", error);
@@ -186,12 +195,16 @@ const ChatRoom = () => {
         summaries: summaries,
       }));
 
-      // console.log("Selected Subject:", state.selectedSubject);
-      // console.log("Selected Language:", state.selectedLanguage);
-      // console.log("Start Date:", state.startDate);
-      // console.log("End Date:", state.endDate);
+      showToast("Success! New chat room created!", {
+        type: "success",
+        placement: "bottom",
+        duration: 4000,
+        topOffset: 30,
+        animationType: "slide-in",
+        style: { marginBottom: 30 },
+      });
 
-      Alert.alert("Success", "New chat room created and summaries fetched!");
+      // Alert.alert("Success", "New chat room created and summaries fetched!");
       incrementRefreshKey();
     } catch (error) {
       Alert.alert("Error", "Failed to create a new chat room.");

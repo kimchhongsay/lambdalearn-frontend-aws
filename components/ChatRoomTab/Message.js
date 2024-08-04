@@ -1,6 +1,7 @@
 import { Timestamp } from "firebase/firestore";
 import React from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
+import Markdown from "react-native-markdown-display";
 
 const Message = ({ item, botAvatar, userAvatar }) => {
   const formatTimestamp = (timestamp) => {
@@ -24,7 +25,7 @@ const Message = ({ item, botAvatar, userAvatar }) => {
         <>
           <Image source={botAvatar} style={styles.avatar} />
           <View style={styles.messageContent}>
-            <Text style={styles.messageText}>{item.text}</Text>
+            <Markdown style={markdownStyles}>{item.text}</Markdown>
             <Text style={styles.timestamp}>
               {formatTimestamp(item.timestamp)}
             </Text>
@@ -68,7 +69,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f2f2f2",
     padding: 10,
     borderRadius: 10,
-    maxWidth: "80%",
+    maxWidth: "85%",
   },
   messageText: {
     fontSize: 16,
@@ -79,5 +80,18 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 });
-
+const markdownStyles = {
+  body: {
+    fontSize: 16,
+    color: "#333",
+  },
+  code_block: {
+    fontSize: 14,
+    backgroundColor: "#272822", // Darker background
+    borderRadius: 8,
+    padding: 10, // Add some padding
+    color: "#f8f8f2", // Light text color for contrast
+    fontFamily: "Menlo, monospace", // Use a monospace font for code
+  },
+};
 export default Message;

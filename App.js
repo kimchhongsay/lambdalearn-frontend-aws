@@ -12,6 +12,7 @@ import { auth } from "./firebaseConfig";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import RecordedSummarizeData from "./screens/RecordedSummarizeData";
+import SummaryDetail from "./screens/SummaryDetail";
 import ChatRoom from "./screens/ChatRoom";
 import { ToastProvider } from "react-native-toast-notifications";
 
@@ -57,6 +58,12 @@ function MainStack({ userInfo }) {
         initialParams={{ userInfo }}
         component={ChatRoom}
         options={{ title: "Chat Room" }}
+      />
+      <Stack.Screen
+        name="SummaryDetail"
+        initialParams={{ userInfo }}
+        component={SummaryDetail}
+        options={{ title: "Summary Detail" }}
       />
     </Stack.Navigator>
   );

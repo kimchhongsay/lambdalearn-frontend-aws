@@ -14,6 +14,8 @@ const MyContext = createContext({
   setUserEmail: () => {},
   removeHtmlTags,
   showToast: () => {},
+  searchItem: "",
+  setSearchItem: () => {},
 });
 
 const MyProvider = ({ children }) => {
@@ -21,6 +23,7 @@ const MyProvider = ({ children }) => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [userEmail, setUserEmail] = useState("");
   const toast = useToastNotification();
+  const [searchItem, setSearchItem] = useState("");
 
   const incrementRefreshKey = useCallback(() => {
     setRefreshKey((prevKey) => prevKey + 1);
@@ -43,6 +46,8 @@ const MyProvider = ({ children }) => {
         removeHtmlTags,
         toast,
         showToast,
+        searchItem,
+        setSearchItem,
       }}>
       {children}
     </MyContext.Provider>

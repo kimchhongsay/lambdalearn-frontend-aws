@@ -24,13 +24,15 @@ const Main = ({ navigation, route }) => {
     setUserEmail,
     setActiveTopTab,
     refreshKey,
+    searchItem,
+    setSearchItem,
   } = useContext(MyContext);
   const userInfo = route.params.userInfo;
 
   const [activeBottomTab, setActiveBottomTab] = useState("Recording");
 
   const topTabs = {
-    Recording: ["Home", "Chat Room"],
+    Recording: ["Home", "Chat Room", "Summarize History"],
   };
 
   useEffect(() => {
@@ -81,7 +83,12 @@ const Main = ({ navigation, route }) => {
           <MaterialIcons name="menu" size={24} color="black" />
         </TouchableOpacity>
       </View>
-      <TextInput style={styles.searchBar} placeholder="Search here" />
+      <TextInput
+        style={styles.searchBar}
+        placeholder="Search here"
+        value={searchItem}
+        onChangeText={setSearchItem}
+      />
       <View style={styles.tabContainerWrapper}>
         <ScrollView horizontal={true} style={styles.tabContainer}>
           {topTabs[activeBottomTab].map((tab) => (

@@ -21,8 +21,9 @@ import { format } from "date-fns";
 
 // _____________________________________________________________________________
 // The following functions are used in the Transcript component in the snippet that use in RecordedSummarizeData.js
+// const SERVER_URL = "https://nsc.ubru.ac.th";
 const SERVER_URL =
-  "https://d94c-2001-fb1-148-756-84-8ad9-8c12-eb53.ngrok-free.app";
+  "https://d1a2-2001-fb1-148-756-6035-56c5-d482-da80.ngrok-free.app";
 
 const encodedFilePath = (filePath) => {
   return filePath.replace(/\//g, "%2F");
@@ -117,17 +118,16 @@ const saveOrUpdateSummaryToFirestore = async (
   }
 };
 
-const deleteSummaryFromFirestore = async (userEmail, filePath) => {
-  const summarizeId = encodedFilePath(filePath);
+const deleteSummaryFromFirestore = async (userEmail, summarizeId) => {
   try {
-    const userDocRef = getUserDocRef(userEmail);
+    const userDocRef = getUserDocRef(userEmail); // Get user document ref
     const summaryRef = doc(userDocRef, "summaries", summarizeId);
-
+    console.log("Summary summarizeId:", summarizeId);
     await deleteDoc(summaryRef);
-    // console.log("Summary deleted successfully!");
+    console.log("Summary deleted successfully!");
   } catch (error) {
     console.error("Error deleting summary: ", error);
-    throw error;
+    throw error; // Re-throw for higher-level error handling
   }
 };
 
@@ -480,6 +480,25 @@ const fetchMessages = async (userEmail, chatRoomId) => {
   }
 };
 
+// _____________________________________________________________________________
+// Function for Summarize History
+const getAllSummariesFromFirestore = async (userEmail) => {
+  try {
+    const userDocRef = getUserDocRef(userEmail);
+    const summariesRef = collection(userDocRef, "summaries");
+
+    const querySnapshot = await getDocs(summariesRef);
+    const summaries = [];
+    querySnapshot.forEach((doc) => {
+      summaries.push({ id: doc.id, ...doc.data() });
+    });
+
+    return summaries;
+  } catch (error) {
+    console.error("Error getting summaries: ", error);
+    throw error;
+  }
+};
 export {
   createChatRoom,
   deleteSummaryFromFirestore,
@@ -502,4 +521,5 @@ export {
   addMessageToFirestore,
   listenToMessages,
   fetchMessages,
+  getAllSummariesFromFirestore,
 };

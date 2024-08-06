@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import ChatRoom from "./TabContents/ChatRoom";
 import RecordingHome from "./TabContents/RecordingHome";
+import SummarizeHistory from "./TabContents/SummarizeHistory";
 
 const DynamicBody = ({ activeTopTab }) => {
   return (
@@ -10,6 +11,8 @@ const DynamicBody = ({ activeTopTab }) => {
         <RecordingHome />
       ) : activeTopTab === "Chat Room" ? (
         <ChatRoom />
+      ) : activeTopTab === "Summarize History" ? (
+        <SummarizeHistory />
       ) : (
         <View>
           <Text style={styles.helpText}>Aviable Tab</Text>

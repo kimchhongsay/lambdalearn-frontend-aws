@@ -11,9 +11,19 @@ import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Entypo } from "@expo/vector-icons";
 
-const ChatRoomCard = ({ chatRoom, onPress, onDelete }) => {
+const SummaryCard = ({ summary, onDelete }) => {
   const swipeAnim = useRef(new Animated.Value(0)).current;
   const navigation = useNavigation();
+
+  const handlePressedSummaryCard = () => {
+    navigation.navigate("SummaryDetail", {
+      summaryId: summary.id,
+      language: summary.Language,
+      subject: summary.Subject,
+      summaryText: summary.Text,
+      datetime: new Date(summary.Date.seconds * 1000).toLocaleString(),
+    });
+  };
 
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -39,14 +49,7 @@ const ChatRoomCard = ({ chatRoom, onPress, onDelete }) => {
   });
 
   const handleDeletePress = () => {
-    onDelete(chatRoom.chatRoomId);
-  };
-
-  const handleClickChatRoom = () => {
-    navigation.navigate("ChatRoom", {
-      chatRoomName: chatRoom.subjects.join(", "),
-      chatRoomId: chatRoom.chatRoomId,
-    });
+    onDelete(summary.id);
   };
 
   return (
@@ -63,26 +66,22 @@ const ChatRoomCard = ({ chatRoom, onPress, onDelete }) => {
           },
         ]}
         {...panResponder.panHandlers}>
-        <TouchableOpacity onPress={handleClickChatRoom}>
+        <TouchableOpacity onPress={handlePressedSummaryCard}>
           <LinearGradient
-            colors={["#FCB69F", "#FFECD2"]}
+            colors={["#1488CC", "#2B32B2"]}
             style={styles.gradientOverlay}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}>
             <View style={styles.content}>
               <View style={styles.header}>
-                <Text style={styles.subject}>
-                  {chatRoom.subjects.join(", ")}
+                <Text style={styles.subject}>{summary.Subject}</Text>
+                <Text style={styles.createdAt}>
+                  {new Date(summary.Date.seconds * 1000).toLocaleString()}
                 </Text>
-                <Text style={styles.createdAt}>{chatRoom.createdAt}</Text>
               </View>
               <View style={styles.infoRow}>
-                <Text style={styles.language}>{chatRoom.language}</Text>
-                <View style={styles.dateContainer}>
-                  <Text style={styles.dateText}>
-                    {chatRoom.startDate} - {chatRoom.endDate}
-                  </Text>
-                </View>
+                <Text style={styles.language}>{summary.Language}</Text>
+                {/* <Text style={styles.text}>{summary.Text}</Text> */}
               </View>
             </View>
           </LinearGradient>
@@ -129,11 +128,11 @@ const styles = StyleSheet.create({
   subject: {
     fontSize: 22,
     fontWeight: "600",
-    color: "#222",
+    overflow: "hidden",
+    color: "#ffffff",
     marginBottom: 8,
   },
   infoRow: {
-    marginTop: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -141,17 +140,12 @@ const styles = StyleSheet.create({
   language: {
     fontSize: 18,
     fontStyle: "italic",
-    color: "#222",
+    color: "#ffffff",
   },
-  dateContainer: {
-    backgroundColor: "#ffffff",
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  dateText: {
-    fontSize: 16,
-    color: "#444",
+  text: {
+    fontSize: 14,
+    color: "#ffffff",
+    marginTop: 10,
   },
   header: {
     flexDirection: "row",
@@ -161,7 +155,7 @@ const styles = StyleSheet.create({
   },
   createdAt: {
     fontSize: 16,
-    color: "#888",
+    color: "#ececec",
   },
   deleteButtonContainer: {
     backgroundColor: "red",
@@ -176,4 +170,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ChatRoomCard;
+export default SummaryCard;

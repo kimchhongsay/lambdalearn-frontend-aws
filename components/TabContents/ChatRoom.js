@@ -2,6 +2,8 @@ import { Entypo } from "@expo/vector-icons";
 import { BlurView } from "@react-native-community/blur";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import React, { useCallback, useContext, useEffect, useState } from "react";
+import LottieView from "lottie-react-native";
+
 import {
   Alert,
   Modal,
@@ -28,7 +30,7 @@ import DropdownPicker from "../assets/DropdownPicker";
 import ChatRoomCard from "../ChatRoomTab/ChatRoomCard";
 
 const ChatRoom = () => {
-  const { userEmail, refreshKey, incrementRefreshKey, showToast } =
+  const { userEmail, refreshKey, incrementRefreshKey, searchItem, showToast } =
     useContext(MyContext);
   const [state, setState] = useState({
     chatRoomsData: [],
@@ -42,6 +44,29 @@ const ChatRoom = () => {
     subjects: [],
     selectedLanguage: "",
     languages: [],
+  });
+
+  // Filtering function
+  const filteredChatRooms = state.chatRoomsData.filter((chatRoom) => {
+    // Trim, normalize spaces, lowercase, AND remove punctuation
+    const normalizedSearchTerm = searchItem
+      .trim()
+      .replace(/\s+/g, " ")
+      .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+      .toLowerCase();
+
+    const searchWords = normalizedSearchTerm.split(" ");
+
+    // Check if ALL search words are present in subjects OR language
+    return (
+      searchWords.every((word) =>
+        chatRoom.subjects.some((subject) =>
+          subject.toLowerCase().includes(word)
+        )
+      ) ||
+      (normalizedSearchTerm &&
+        chatRoom.language.toLowerCase().includes(normalizedSearchTerm)) // Check language for the entire phrase
+    );
   });
 
   const formatTimestamp = (timestamp) => {
@@ -272,16 +297,30 @@ const ChatRoom = () => {
       </TouchableOpacity>
 
       <ScrollView style={styles.chatRoomList} key={refreshKey}>
-        {state.chatRoomsData.map((chatRoom, index) => (
-          <ChatRoomCard
-            key={index}
-            chatRoom={chatRoom}
-            onDelete={handleDelete}
-            onPress={() => {
-              console.log("Chat room pressed:", chatRoom);
-            }}
-          />
-        ))}
+        {filteredChatRooms.length > 0 ? (
+          filteredChatRooms.map((chatRoom, index) => (
+            <ChatRoomCard
+              key={index}
+              chatRoom={chatRoom}
+              onDelete={handleDelete}
+              onPress={() => {
+                console.log("Chat room pressed:", chatRoom);
+              }}
+            />
+          ))
+        ) : (
+          <View style={styles.noChatRoomsContainer}>
+            <LottieView
+              source={require("../../assets/animate/emptyChatroom.json")}
+              autoPlay
+              loop
+              style={styles.emptyChatroomCard}
+            />
+            <Text style={styles.noChatRoomsText}>
+              You haven't created any chat rooms yet.
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
       <Modal
@@ -491,6 +530,21 @@ const styles = StyleSheet.create({
   chatRoomList: {
     flex: 1, // This makes ScrollView take up remaining space
     marginTop: 10,
+  },
+  noChatRoomsContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  noChatRoomsText: {
+    fontSize: 16,
+    color: "#666", // Adjust color as needed
+    textAlign: "center",
+  },
+  emptyChatroomCard: {
+    width: 100,
+    height: 100,
+    marginTop: 60,
   },
 });
 

@@ -190,7 +190,7 @@ const ChatRoom = ({ route, navigation }) => {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      // behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={100}>
       <View style={styles.header}>
         <Text style={styles.subjectSelectText}>Subjects Selected: </Text>

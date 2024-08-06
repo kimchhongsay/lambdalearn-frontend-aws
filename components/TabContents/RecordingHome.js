@@ -13,6 +13,7 @@ import { MyContext } from "../../hooks/MyContext";
 import { SortingOptions, sortRecordings } from "../assets/SortingOptions";
 import NewRecord from "../RecordingTab/NewRecord";
 import RecordingItem from "../RecordingTab/RecordingItem";
+import LottieView from "lottie-react-native";
 
 const RecordingHome = () => {
   const { refreshKey, incrementRefreshKey, userEmail } = useContext(MyContext);
@@ -20,7 +21,27 @@ const RecordingHome = () => {
   const [recordings, setRecordings] = useState([]);
   const [sortOption, setSortOption] = useState(SortingOptions.DATE); // Default sort by date
   const [sortDirection, setSortDirection] = useState("desc"); // Default sort direction
-  const { activeTopTab, setActiveTopTab } = useContext(MyContext);
+  const { activeTopTab, setActiveTopTab, searchItem } = useContext(MyContext);
+
+  const filterRecordingsBySearch = (recordings, searchItem) => {
+    if (!searchItem) return recordings;
+
+    const normalizedSearchTerm = searchItem
+      .trim()
+      .toLowerCase()
+      .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "");
+
+    return recordings.filter((recording) => {
+      const subjectMatch = recording.subject
+        .toLowerCase()
+        .includes(normalizedSearchTerm);
+      const datetimeMatch = recording.datetime
+        .toLowerCase()
+        .includes(normalizedSearchTerm);
+
+      return subjectMatch || datetimeMatch;
+    });
+  };
 
   const formatDuration = (durationInSeconds) => {
     const hours = Math.floor(durationInSeconds / 3600);
@@ -170,19 +191,35 @@ const RecordingHome = () => {
       </View>
 
       <ScrollView style={{ flex: 1 }}>
-        {recordings.length > 0 ? (
-          recordings.map((recording, index) => (
-            <RecordingItem
-              key={index}
-              subject={recording.subject}
-              title={recording.title}
-              duration={formatDuration(recording.duration)}
-              datetime={recording.datetime}
-              filePath={recording.filePath}
-            />
-          ))
+        {/* Apply filtering function here */}
+        {filterRecordingsBySearch(recordings, searchItem).length > 0 ? (
+          filterRecordingsBySearch(recordings, searchItem).map(
+            (recording, index) => (
+              <RecordingItem
+                key={index}
+                subject={recording.subject}
+                title={recording.title}
+                duration={formatDuration(recording.duration)}
+                datetime={recording.datetime}
+                filePath={recording.filePath}
+              />
+            )
+          )
         ) : (
-          <Text style={styles.noRecordText}>There's no record yet.</Text>
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+            }}>
+            <LottieView
+              source={require("../../assets/animate/emptyfile.json")}
+              autoPlay
+              loop
+              style={styles.noFileRecord}
+            />
+            <Text style={styles.noRecordText}>There's no record yet.</Text>
+          </View>
         )}
       </ScrollView>
 
@@ -256,8 +293,12 @@ const styles = StyleSheet.create({
   },
   noRecordText: {
     alignSelf: "center",
-    marginTop: 20,
     fontSize: 16,
     color: "#666",
+  },
+  noFileRecord: {
+    width: 200,
+    height: 200,
+    marginTop: 70,
   },
 });

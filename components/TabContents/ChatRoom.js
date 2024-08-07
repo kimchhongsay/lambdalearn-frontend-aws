@@ -24,6 +24,7 @@ import {
   getDistinctSubjectsFromFirestore,
   getUserDocRef,
   deleteChatRoom,
+  getSummariesFromFirestore,
 } from "../../api/api";
 import { MyContext } from "../../hooks/MyContext";
 import DropdownPicker from "../assets/DropdownPicker";
@@ -205,12 +206,24 @@ const ChatRoom = () => {
     }
 
     try {
-      const { chatRoomId, summaries } = await createChatRoom(
+      // Fetch summaries based on user selection
+      const summaries = await getSummariesFromFirestore(
         userEmail,
         state.selectedSubject,
         state.selectedLanguage,
         state.startDate,
         state.endDate
+      );
+
+      console.log("Summaries fetched:", summaries);
+
+      await createChatRoom(
+        userEmail,
+        state.selectedSubject,
+        state.selectedLanguage,
+        state.startDate,
+        state.endDate,
+        summaries
       );
 
       setState((prevState) => ({

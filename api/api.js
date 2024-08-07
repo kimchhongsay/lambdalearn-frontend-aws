@@ -21,9 +21,9 @@ import { format } from "date-fns";
 
 // _____________________________________________________________________________
 // The following functions are used in the Transcript component in the snippet that use in RecordedSummarizeData.js
-// const SERVER_URL = "https://nsc.ubru.ac.th";
-const SERVER_URL =
-  "https://d1a2-2001-fb1-148-756-6035-56c5-d482-da80.ngrok-free.app";
+const SERVER_URL = "https://nsc.ubru.ac.th";
+// const SERVER_URL =
+//   "https://d1a2-2001-fb1-148-756-6035-56c5-d482-da80.ngrok-free.app";
 
 const encodedFilePath = (filePath) => {
   return filePath.replace(/\//g, "%2F");
@@ -275,7 +275,7 @@ const getSummariesFromFirestore = async (
             ).toLocaleString()}\n`
         )
         .join("\n");
-      // console.log(formatSummarize);
+      console.log(formatSummarize);
     } else {
       console.log("No summaries available or summaries is not an array");
     }
@@ -293,7 +293,8 @@ const createChatRoom = async (
   selectedSubject,
   selectedLanguage,
   startDate,
-  endDate
+  endDate,
+  userDocs
 ) => {
   try {
     const userDocRef = getUserDocRef(userEmail);
@@ -316,23 +317,14 @@ const createChatRoom = async (
       createdAt: Timestamp.now(),
     });
 
-    // Fetch summaries based on user selection
-    const summariesData = await getSummariesFromFirestore(
-      userEmail,
-      selectedSubject,
-      selectedLanguage,
-      startDateOnly,
-      endDateOnly
-    );
-
     // Save summaries directly in the chat room document as a field
     await updateDoc(chatRoomRef, {
-      userDocs: summariesData,
+      userDocs: userDocs,
     });
 
     return {
       chatRoomId,
-      userDocs: summariesData,
+      userDocs: userDocs,
     };
   } catch (error) {
     console.error("Error creating chat room:", error);

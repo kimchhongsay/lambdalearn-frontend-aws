@@ -1,6 +1,7 @@
 {
   "name": "alcademyassist",
   "version": "1.0.0",
+  "proxy":"https://nsc.ubru.ac.th",
   "scripts": {
     "start": "expo start --dev-client",
     "android": "expo run:android",

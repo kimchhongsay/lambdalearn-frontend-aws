@@ -301,6 +301,11 @@ const NewRecord = ({ visible, onClose }) => {
     setRecordName("Untitled");
   };
 
+  const truncateFileName = (name, maxLength = 20) => {
+    if (name.length <= maxLength) return name;
+    const half = Math.floor(maxLength / 2);
+    return `${name.substring(0, half)}...${name.substring(name.length - half)}`;
+  };
   return (
     <Modal
       visible={visible}
@@ -383,7 +388,7 @@ const NewRecord = ({ visible, onClose }) => {
           {selectedFile ? (
             <View style={styles.selectedFileContainer}>
               <Text style={styles.selectedFileText}>
-                Selected File: {selectedFile.name}
+                Selected File: {truncateFileName(selectedFile.name)}
               </Text>
               <TouchableOpacity onPress={handleUnselectedAudioImport}>
                 <Text style={styles.unselectText}>Unselect</Text>

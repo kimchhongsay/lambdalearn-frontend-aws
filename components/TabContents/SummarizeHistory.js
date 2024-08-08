@@ -44,12 +44,6 @@ const SummarizeHistory = () => {
     );
   };
 
-  const deleteSummary = (id) => {
-    setSummaries((prevSummaries) =>
-      prevSummaries.filter((summary) => summary.id !== id)
-    );
-  };
-
   const filterSummariesBySearch = (summaries, searchItem) => {
     if (!searchItem) return summaries;
 

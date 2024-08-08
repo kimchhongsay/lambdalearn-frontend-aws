@@ -7,26 +7,39 @@
       "developmentClient": true,
       "distribution": "internal",
       "android": {
-        "distribution": "internal",
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
-        "distribution": "internal",
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
       }
-      
+    },
+    "userTesting": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      }
     },
     "production": {
+      "distribution": "store",
       "android": {
-        "distribution": "internal",
-        "buildType": "apk"
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease",
+        "releaseChannel": "default"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./android/app/google-services.json",
+        "track": "production"
+      }
+    }
   }
 }

@@ -44,21 +44,41 @@ const ChatRoom = ({ route, navigation }) => {
     "What are the main takeaways I should remember?",
     "Did the lecturer mention any important dates or deadlines?",
     "What are the main topics covered in this lecture?",
-    "What did the lecture say about...", // User adds specific concept/term
-    "Can you find the definition of... from the lecture?", // User adds term
-    "What were the main arguments for... ?", // User adds theory/concept
-    "Were there any real-world examples given for...?", // User adds topic
-    "Did the lecture mention anything about...?", // User adds related topic
+    "What did the lecture say about a specific concept or term?",
+    "Can you find the definition of a term from the lecture?",
+    "What were the main arguments for a theory or concept?",
+    "Were there any real-world examples given for a topic?",
+    "Did the lecture mention anything about a related topic?",
     "Create flashcards for the key terms in this lecture.",
     "Generate a quiz based on the information in this summary.",
-    "Can you explain... in simpler terms?", // User adds concept
-    "How does... relate to... ?", // User adds two concepts
+    "Can you explain a concept in simpler terms?",
+    "How does one concept relate to another?",
     "Are there any online resources mentioned that relate to this lecture?",
     "What are the important things I should research further?",
     "Are there any practice problems or exercises related to this lecture?",
     "Should I read any specific chapters in the textbook based on this lecture?",
     "Are there any upcoming assignments related to this material?",
     "Can you create a study guide based on this lecture summary?",
+    "What are the most important points made in this lecture?",
+    "Can you list three main ideas from this lecture?",
+    "What should I remember from this lecture?",
+    "Were any deadlines mentioned in the lecture?",
+    "What were the key topics discussed in this lecture?",
+    "What did the lecturer say about a specific idea?",
+    "Can you define a term mentioned in the lecture?",
+    "What were the key points for a theory discussed?",
+    "Were any real-life examples given in the lecture?",
+    "Did the lecture talk about any related ideas?",
+    "Make flashcards for important terms from the lecture.",
+    "Create a quiz based on this lecture.",
+    "Explain a topic from the lecture in simple terms.",
+    "How are two ideas from the lecture connected?",
+    "Were any websites or online tools mentioned?",
+    "What should I look into more after this lecture?",
+    "Were there any practice problems mentioned?",
+    "Should I read any parts of the textbook?",
+    "Are there any assignments due related to this lecture?",
+    "Can you make a study guide from this lecture?",
   ];
 
   useEffect(() => {
@@ -192,10 +212,10 @@ const ChatRoom = ({ route, navigation }) => {
       style={styles.container}
       // behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={100}>
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <Text style={styles.subjectSelectText}>Subjects Selected: </Text>
         <Text style={styles.roomName}>{chatRoomName}</Text>
-      </View>
+      </View> */}
 
       {messages.length === 0 ? (
         <View style={styles.emptyStateContainer}>
@@ -273,7 +293,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 10,
-    backgroundColor: "#f2f2f2",
+    backgroundColor: "#48ff3b",
   },
   subjectSelectText: {
     fontSize: 16,

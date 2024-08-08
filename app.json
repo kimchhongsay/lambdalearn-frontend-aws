@@ -17,7 +17,8 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#f0f4f8"
+        "backgroundColor": "#f0f4f8",
+        "usesCleartextTraffic": true
       },
       "package": "com.kimchhong.alcademyassist",
       "permissions": [

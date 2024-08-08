@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
   StyleSheet,
   View,
@@ -14,20 +14,33 @@ import { Entypo } from "@expo/vector-icons";
 const SummaryCard = ({ summary, onDelete }) => {
   const swipeAnim = useRef(new Animated.Value(0)).current;
   const navigation = useNavigation();
+  const [longPressActivated, setLongPressActivated] = useState(false);
+  const longPressTimeout = useRef(null);
 
   const handlePressedSummaryCard = () => {
-    navigation.navigate("SummaryDetail", {
-      summaryId: summary.id,
-      language: summary.Language,
-      subject: summary.Subject,
-      summaryText: summary.Text,
-      datetime: new Date(summary.Date.seconds * 1000).toLocaleString(),
-    });
+    if (!longPressActivated) {
+      navigation.navigate("SummaryDetail", {
+        summaryId: summary.id,
+        language: summary.Language,
+        subject: summary.Subject,
+        summaryText: summary.Text,
+        datetime: new Date(summary.Date.seconds * 1000).toLocaleString(),
+      });
+    }
+  };
+
+  const handleLongPress = () => {
+    setLongPressActivated(true);
+  };
+
+  const handlePressOut = () => {
+    clearTimeout(longPressTimeout.current);
+    setLongPressActivated(false);
   };
 
   const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
+    onStartShouldSetPanResponder: () => longPressActivated,
+    onMoveShouldSetPanResponder: () => longPressActivated,
     onPanResponderMove: (_, gestureState) => {
       if (gestureState.dx < 0) {
         swipeAnim.setValue(gestureState.dx);
@@ -45,6 +58,7 @@ const SummaryCard = ({ summary, onDelete }) => {
           useNativeDriver: false,
         }).start();
       }
+      setLongPressActivated(false);
     },
   });
 
@@ -66,7 +80,12 @@ const SummaryCard = ({ summary, onDelete }) => {
           },
         ]}
         {...panResponder.panHandlers}>
-        <TouchableOpacity onPress={handlePressedSummaryCard}>
+        <TouchableOpacity
+          onPress={handlePressedSummaryCard}
+          onLongPress={() => {
+            longPressTimeout.current = setTimeout(handleLongPress, 200);
+          }}
+          onPressOut={handlePressOut}>
           <LinearGradient
             colors={["#1488CC", "#2B32B2"]}
             style={styles.gradientOverlay}

@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
   StyleSheet,
   View,
@@ -14,10 +14,34 @@ import { Entypo } from "@expo/vector-icons";
 const ChatRoomCard = ({ chatRoom, onPress, onDelete }) => {
   const swipeAnim = useRef(new Animated.Value(0)).current;
   const navigation = useNavigation();
+  const [longPressActivated, setLongPressActivated] = useState(false);
+  const longPressTimeout = useRef(null);
+
+  const handleDeletePress = () => {
+    onDelete(chatRoom.chatRoomId);
+  };
+
+  const handleClickChatRoom = () => {
+    if (!longPressActivated) {
+      navigation.navigate("ChatRoom", {
+        chatRoomName: chatRoom.subjects.join(", "),
+        chatRoomId: chatRoom.chatRoomId,
+      });
+    }
+  };
+
+  const handleLongPress = () => {
+    setLongPressActivated(true);
+  };
+
+  const handlePressOut = () => {
+    clearTimeout(longPressTimeout.current);
+    setLongPressActivated(false);
+  };
 
   const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
+    onStartShouldSetPanResponder: () => longPressActivated,
+    onMoveShouldSetPanResponder: () => longPressActivated,
     onPanResponderMove: (_, gestureState) => {
       if (gestureState.dx < 0) {
         swipeAnim.setValue(gestureState.dx);
@@ -35,19 +59,9 @@ const ChatRoomCard = ({ chatRoom, onPress, onDelete }) => {
           useNativeDriver: false,
         }).start();
       }
+      setLongPressActivated(false);
     },
   });
-
-  const handleDeletePress = () => {
-    onDelete(chatRoom.chatRoomId);
-  };
-
-  const handleClickChatRoom = () => {
-    navigation.navigate("ChatRoom", {
-      chatRoomName: chatRoom.subjects.join(", "),
-      chatRoomId: chatRoom.chatRoomId,
-    });
-  };
 
   return (
     <View style={styles.cardContainer}>
@@ -63,7 +77,12 @@ const ChatRoomCard = ({ chatRoom, onPress, onDelete }) => {
           },
         ]}
         {...panResponder.panHandlers}>
-        <TouchableOpacity onPress={handleClickChatRoom}>
+        <TouchableOpacity
+          onPress={handleClickChatRoom}
+          onLongPress={() => {
+            longPressTimeout.current = setTimeout(handleLongPress, 200);
+          }}
+          onPressOut={handlePressOut}>
           <LinearGradient
             colors={["#FCB69F", "#FFECD2"]}
             style={styles.gradientOverlay}

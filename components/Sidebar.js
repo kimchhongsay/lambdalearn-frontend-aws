@@ -146,6 +146,7 @@ const Sidebar = ({ navigation, setUserInfo }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <Text style={styles.ownerText}>©️kimchhongsay2001@gmail.com</Text>
       <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
         <Text style={styles.drawerItem}>Sign Out</Text>
       </TouchableOpacity>
@@ -197,5 +198,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#ddd",
     backgroundColor: "#a30000",
+  },
+  ownerText: {
+    textAlign: "center",
+    color: "#888",
   },
 });

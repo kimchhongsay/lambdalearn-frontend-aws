@@ -66,6 +66,8 @@ const Main = ({ navigation, route }) => {
 
   return (
     <View style={styles.container} key={refreshKey}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f0f4f8" />
+
       <View style={styles.header}>
         {userInfo?.photoURL && (
           <Image
@@ -118,7 +120,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f0f4f8",
     padding: 16,
-    marginTop: StatusBar.currentHeight || 0,
+    // marginTop: StatusBar.currentHeight || 0,
   },
   header: {
     flexDirection: "row",

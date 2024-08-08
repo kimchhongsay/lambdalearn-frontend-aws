@@ -47,6 +47,7 @@ const transcriptAudio = async (filePath) => {
       "Content-Type": "multipart/form-data",
     },
     timeout: 600000,
+    maxRedirects: 5,
   });
 
   return response.data.transcript;

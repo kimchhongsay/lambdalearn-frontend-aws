@@ -104,10 +104,14 @@ const summarizeTranscript = async (purgedTranscript) => {
 
 const translateText = async (text, target_language) => {
   try {
-    const response = await axios.post(SERVER_URL + "/translate_with_llm/", {
-      text,
-      target_language,
-    });
+    const response = await axios.post(
+      SERVER_URL + "/translate_with_llm/",
+      {
+        text,
+        target_language,
+      },
+      { timeout: 3000000 } // 5 minutes
+    );
     return response.data.translated_text;
   } catch (error) {
     console.log("Error translating text: ", error);

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Animated,
   PanResponder,
+  Vibration,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -35,6 +36,7 @@ const ChatRoomCard = ({ chatRoom, onPress, onDelete }) => {
   };
 
   const handlePressOut = () => {
+    Vibration.vibrate();
     clearTimeout(longPressTimeout.current);
     setLongPressActivated(false);
   };
@@ -80,7 +82,7 @@ const ChatRoomCard = ({ chatRoom, onPress, onDelete }) => {
         <TouchableOpacity
           onPress={handleClickChatRoom}
           onLongPress={() => {
-            longPressTimeout.current = setTimeout(handleLongPress, 200);
+            longPressTimeout.current = setTimeout(handleLongPress, 50);
           }}
           onPressOut={handlePressOut}>
           <LinearGradient

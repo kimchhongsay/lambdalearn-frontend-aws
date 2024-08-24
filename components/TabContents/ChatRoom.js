@@ -249,22 +249,25 @@ const ChatRoom = () => {
   };
   const handleQuickChat = async () => {
     try {
+      const quickChatRoomSubject = ["Quick Chat"];
+      const quickChatLanguage = ""; // Default to English for quick chat
+      const currentDate = new Date();
+
       await createChatRoom(
         userEmail,
-        state.selectedSubject,
-        state.selectedLanguage,
-        state.startDate,
-        state.endDate,
-        summaries
+        quickChatRoomSubject, // Use predefined subject for quick chat
+        quickChatLanguage, // Use predefined language for quick chat
+        currentDate, // Use current date as start date
+        currentDate, // Use current date as end date (or you can leave it empty)
+        ["Quick Chat"] // Empty summaries for quick chat
       );
 
       setState((prevState) => ({
         ...prevState,
         modalVisible: false,
-        summaries: summaries,
       }));
 
-      showToast("Success! New chat room created!", {
+      showToast("Success! New quick chat room created!", {
         type: "success",
         placement: "bottom",
         duration: 4000,
@@ -273,10 +276,9 @@ const ChatRoom = () => {
         style: { marginBottom: 30 },
       });
 
-      // Alert.alert("Success", "New chat room created and summaries fetched!");
       incrementRefreshKey();
     } catch (error) {
-      Alert.alert("Error", "Failed to create a new chat room.");
+      Alert.alert("Error", "Failed to create a new quick chat room.");
     }
   };
 

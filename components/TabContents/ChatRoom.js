@@ -247,6 +247,38 @@ const ChatRoom = () => {
       Alert.alert("Error", "Failed to create a new chat room.");
     }
   };
+  const handleQuickChat = async () => {
+    try {
+      await createChatRoom(
+        userEmail,
+        state.selectedSubject,
+        state.selectedLanguage,
+        state.startDate,
+        state.endDate,
+        summaries
+      );
+
+      setState((prevState) => ({
+        ...prevState,
+        modalVisible: false,
+        summaries: summaries,
+      }));
+
+      showToast("Success! New chat room created!", {
+        type: "success",
+        placement: "bottom",
+        duration: 4000,
+        topOffset: 30,
+        animationType: "slide-in",
+        style: { marginBottom: 30 },
+      });
+
+      // Alert.alert("Success", "New chat room created and summaries fetched!");
+      incrementRefreshKey();
+    } catch (error) {
+      Alert.alert("Error", "Failed to create a new chat room.");
+    }
+  };
 
   const handleDateChange = (event, selectedDate) => {
     setState((prevState) => {
@@ -426,7 +458,24 @@ const ChatRoom = () => {
                 <TouchableOpacity
                   style={styles.saveButton}
                   onPress={handleSaveChatRoom}>
-                  <Text style={styles.saveButtonText}>Save</Text>
+                  <Text style={styles.saveButtonText}>Create a Chatroom</Text>
+                </TouchableOpacity>
+                <Text
+                  style={{
+                    fontSize: 18,
+                    color: "#6a6a6a",
+                    textAlign: "center",
+                    fontStyle: "italic",
+                    paddingVertical: 10,
+                  }}>
+                  Or
+                </Text>
+                <TouchableOpacity
+                  style={styles.quickChatButton}
+                  onPress={handleQuickChat}>
+                  <Text style={styles.quickChatButtonText}>
+                    Quick chat without Document
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -519,7 +568,17 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     alignItems: "center",
   },
+  quickChatButton: {
+    backgroundColor: "#16db65",
+    padding: 10,
+    borderRadius: 5,
+    alignItems: "center",
+  },
   saveButtonText: {
+    color: "white",
+    fontSize: 16,
+  },
+  quickChatButtonText: {
     color: "white",
     fontSize: 16,
   },

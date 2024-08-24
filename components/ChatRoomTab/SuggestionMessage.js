@@ -40,7 +40,9 @@ const styles = StyleSheet.create({
     marginBottom: 10, // Add some space between suggestions and input
   },
   suggestionButton: {
-    backgroundColor: "#f2f2f2",
+    // backgroundColor: "#f2f2f2",
+    borderColor: "#007bff",
+    borderWidth: 1,
     padding: 10,
     borderRadius: 10,
     marginRight: 10,

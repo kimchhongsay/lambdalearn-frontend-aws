@@ -37,7 +37,7 @@ const requestPermission = async (permissionType, title, message) => {
 
     if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
       console.log(`${title} not granted`);
-      Alert.alert("Permission Denied", `${title} is required to proceed.`);
+      // Alert.alert("Permission Denied", `${title} is required to proceed.`);
       throw new Error(`${title} not granted`);
     }
   } catch (err) {
@@ -186,7 +186,7 @@ const NewRecord = ({ visible, onClose }) => {
       onClose();
     } catch (error) {
       console.error("Failed to save recording:", error);
-      Alert.alert("Error", "Failed to save recording.");
+      // Alert.alert("Error", "Failed to save recording.");
     }
   };
 
@@ -205,7 +205,7 @@ const NewRecord = ({ visible, onClose }) => {
       }
     } catch (error) {
       console.error("Error selecting document:", error);
-      Alert.alert("Error", "Failed to select audio file.");
+      // Alert.alert("Error", "Failed to select audio file.");
     }
   };
 

@@ -29,6 +29,7 @@ import {
   saveOrUpdateSummaryToFirestore,
   getSummaryFromFirestore,
   deleteSummaryFromFirestore,
+  encodedFilePath,
 } from "../api/api";
 import { MyContext } from "../hooks/MyContext";
 
@@ -223,13 +224,25 @@ const RecordedSummarizeData = ({ route, navigation }) => {
       );
 
       if (!primarySummary) {
-        const transcript = state.transcript || (await handleTranscriptAudio());
+        try {
+          const transcript =
+            state.transcript || (await handleTranscriptAudio());
 
-        const purgedTranscript = await purgeTranscript(transcript);
+          const purgedTranscript = await purgeTranscript(transcript);
 
-        primarySummary = await summarizeTranscript(purgedTranscript);
+          console.log("\n\n Purged Transcript: ", purgedTranscript);
+          primarySummary = await summarizeTranscript(purgedTranscript);
 
-        await saveToAsyncStorage(`${filePath}_primarySummary`, primarySummary);
+          await saveToAsyncStorage(
+            `${filePath}_primarySummary`,
+            primarySummary
+          );
+        } catch (error) {
+          console.log(
+            "Error getting primary summary from AsyncStorage:",
+            error
+          );
+        }
       }
 
       for (let i = 0; i < state.selectedSummarizeLanguages.length; i++) {
@@ -372,8 +385,7 @@ const RecordedSummarizeData = ({ route, navigation }) => {
       removeFromAsyncStorage(`${filePath}_summarized_${language}`);
 
       // Remove summarize text from firestore
-      const summarizeId = `${filePath}_summarized_${language}`;
-      deleteSummaryFromFirestore(userEmail, summarizeId);
+      deleteSummaryFromFirestore(userEmail, encodedFilePath(filePath));
 
       // 2. Update the state to reflect the deletion
       setState((prevState) => {

@@ -22,9 +22,7 @@ import { format } from "date-fns";
 // _____________________________________________________________________________
 // The following functions are used in the Transcript component in the snippet that use in RecordedSummarizeData.js
 const SERVER_URL = "https://nsc.ubru.ac.th";
-// const SERVER_URL =
-//   "https://d1a2-2001-fb1-148-756-6035-56c5-d482-da80.ngrok-free.app";
-
+// const SERVER_URL = "https://093b-202-29-20-94.ngrok-free.app";
 const encodedFilePath = (filePath) => {
   return filePath.replace(/\//g, "%2F");
 };
@@ -42,39 +40,79 @@ const transcriptAudio = async (filePath) => {
     name: "audio.mp3",
   });
 
-  const response = await axios.post(SERVER_URL + api_route, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-    timeout: 600000,
-    maxRedirects: 5,
-  });
+  try {
+    const response = await axios.post(SERVER_URL + api_route, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      timeout: 6000000, // 10 minutes
+      maxRedirects: 5,
+    });
 
-  return response.data.transcript;
+    return response.data.transcript;
+  } catch (error) {
+    console.error("Error transcribing audio: ", error.message);
+    if (error.response) {
+      console.error("Status code:", error.response.status);
+      console.error("Response data:", error.response.data);
+    } else if (error.request) {
+      console.error("Request made but no response received:", error.request);
+    } else {
+      console.error("Error setting up request:", error.message);
+    }
+    throw error;
+  }
 };
 
 const purgeTranscript = async (transcript) => {
-  const response = await axios.post(SERVER_URL + "/purge/", {
-    transcript,
-    language: "The same language format as input",
-  });
-  return response.data.purged_transcript;
+  console.log("Transcript text: ", transcript);
+  try {
+    const response = await axios.post(
+      SERVER_URL + "/purge/",
+      {
+        transcript: transcript,
+        language: "The same language format as input",
+      },
+      { timeout: 3000000 } // 5 minutes
+    );
+
+    console.log("Purged Transcript: ", response.data.purged_transcript);
+    return response.data.purged_transcript;
+  } catch (error) {
+    console.error("Error purging transcript: ", error);
+    throw error;
+  }
 };
 
 const summarizeTranscript = async (purgedTranscript) => {
-  const response = await axios.post(SERVER_URL + "/summarize/", {
-    purged_transcript: purgedTranscript,
-    language: "English",
-  });
-  return response.data.transcribe_summarize;
+  console.log("Summarize Transcript: ", purgedTranscript);
+  try {
+    const response = await axios.post(
+      SERVER_URL + "/summarize/",
+      {
+        purged_transcript: purgedTranscript,
+        language: "English",
+      },
+      { timeout: 3000000 } // 5 minutes
+    );
+    return response.data.transcribe_summarize;
+  } catch (error) {
+    console.log("Error summarizing transcript: ", error);
+    throw error;
+  }
 };
 
 const translateText = async (text, target_language) => {
-  const response = await axios.post(SERVER_URL + "/translate_with_llm/", {
-    text,
-    target_language,
-  });
-  return response.data.translated_text;
+  try {
+    const response = await axios.post(SERVER_URL + "/translate_with_llm/", {
+      text,
+      target_language,
+    });
+    return response.data.translated_text;
+  } catch (error) {
+    console.log("Error translating text: ", error);
+    throw error;
+  }
 };
 
 const saveToAsyncStorage = async (key, value) => {
@@ -515,4 +553,5 @@ export {
   listenToMessages,
   fetchMessages,
   getAllSummariesFromFirestore,
+  encodedFilePath,
 };

@@ -34,11 +34,16 @@ import {
 import { MyContext } from "../hooks/MyContext";
 
 const summarizeLanguageOption = [
-  { value: "English", label: "English" },
   { value: "Thai", label: "Thai" },
-  { value: "French", label: "French" },
+  { value: "English", label: "English" },
   { value: "Khmer", label: "Khmer" },
-  // Add more languages as needed
+  { value: "French", label: "French" },
+  { value: "Japanese", label: "Japanese" },
+  { value: "Korean", label: "Korean" },
+  { value: "Chinese", label: "Chinese" },
+  { value: "Vietnamese", label: "Vietnamese" },
+  { value: "Indonesian", label: "Indonesian" },
+  { value: "Filipino", label: "Filipino" },
 ];
 
 const RecordedSummarizeData = ({ route, navigation }) => {
@@ -197,7 +202,7 @@ const RecordedSummarizeData = ({ route, navigation }) => {
         ...prevState,
         transcript,
         editableTranscript: transcript,
-        isEditingTranscript: true,
+        isEditingTranscript: false,
       }));
 
       await saveToAsyncStorage(filePath, transcript);
@@ -219,72 +224,56 @@ const RecordedSummarizeData = ({ route, navigation }) => {
     }));
 
     try {
-      let primarySummary = await getFromAsyncStorage(
-        `${filePath}_primarySummary`
+      let purgedTranscript = await getFromAsyncStorage(
+        `${filePath}_purgedTranscript`
       );
 
-      if (!primarySummary) {
-        try {
-          const transcript =
-            state.transcript || (await handleTranscriptAudio());
-
-          const purgedTranscript = await purgeTranscript(transcript);
-
-          console.log("\n\n Purged Transcript: ", purgedTranscript);
-          primarySummary = await summarizeTranscript(purgedTranscript);
-
-          await saveToAsyncStorage(
-            `${filePath}_primarySummary`,
-            primarySummary
-          );
-        } catch (error) {
-          console.log(
-            "Error getting primary summary from AsyncStorage:",
-            error
-          );
-        }
+      if (!purgedTranscript) {
+        const transcript = state.transcript || (await handleTranscriptAudio());
+        purgedTranscript = await purgeTranscript(transcript);
+        await saveToAsyncStorage(
+          `${filePath}_purgedTranscript`,
+          purgedTranscript
+        );
       }
 
       for (let i = 0; i < state.selectedSummarizeLanguages.length; i++) {
         const language = state.selectedSummarizeLanguages[i];
 
-        try {
-          let summarizedText;
-          if (language === "English") {
-            summarizedText = primarySummary;
-          } else {
-            summarizedText = await translateText(primarySummary, language);
-          }
-
-          setState((prevState) => ({
-            ...prevState,
-            summarizedTexts: {
-              ...prevState.summarizedTexts,
-              [language]: summarizedText,
-            },
-            isEditingSummarizedText: {
-              ...prevState.isEditingSummarizedText,
-              [language]: false,
-            },
-          }));
-
-          await saveToAsyncStorage(
-            `${filePath}_summarized_${language}`,
-            summarizedText
+        let summarizedText;
+        if (language === "Khmer") {
+          const EnSummarizedText = await summarizeTranscript(
+            purgedTranscript,
+            "English"
           );
-
-          // Save to Firestore
-          const simmarizeId = `${filePath}_summarized_${language}`;
-          await saveOrUpdateSummaryToFirestore(
-            simmarizeId,
-            userEmail, // Pass userEmail here
-            language,
-            removeHtmlTags(summarizedText),
-            subject
+          summarizedText = await translateText(EnSummarizedText, language);
+        } else {
+          summarizedText = await summarizeTranscript(
+            purgedTranscript,
+            language
           );
-        } catch (error) {
-          console.error(`Error translating/summarizing in ${language}:`, error);
         }
+
+        setState((prevState) => ({
+          ...prevState,
+          summarizedTexts: {
+            ...prevState.summarizedTexts,
+            [language]: summarizedText,
+          },
+          isEditingSummarizedText: {
+            ...prevState.isEditingSummarizedText,
+            [language]: false,
+          },
+        }));
+
+        const simmarizeId = `${filePath}_summarized_${language}`;
+        await saveOrUpdateSummaryToFirestore(
+          simmarizeId,
+          userEmail,
+          language,
+          removeHtmlTags(summarizedText),
+          subject
+        );
       }
     } catch (error) {
       setState((prevState) => ({

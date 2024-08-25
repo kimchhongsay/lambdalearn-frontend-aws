@@ -6,6 +6,7 @@ import {
   SafeAreaView,
   Image,
   TouchableOpacity,
+  StatusBar,
 } from "react-native";
 
 export default function SignIn({ promptAsync }) {
@@ -14,6 +15,7 @@ export default function SignIn({ promptAsync }) {
       style={{
         flex: 1,
       }}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f0f4f8" />
       <View style={styles.container}>
         <View style={styles.header}>
           <Image

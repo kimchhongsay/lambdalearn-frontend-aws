@@ -33,12 +33,13 @@ const ChatRoom = ({ route, navigation }) => {
   const userData = route.params.userInfo;
   const [isLoading, setIsLoading] = useState(false);
   const [userDocs, setUserDocs] = useState("");
+  const [chatroomSubject, setChatroomSubject] = useState("");
 
   const userAvatar = userData.photoURL;
   const botAvatar = require("../assets/gemini.jpg");
 
   // Message suggestions tailored for lecture summaries:
-  const allMessageSuggestions = [
+  const allMessageSuggestionsForNormalChatroom = [
     "What are the key points from this lecture?",
     "Can you summarize this lecture in 3 bullet points?",
     "What are the main takeaways I should remember?",
@@ -81,6 +82,29 @@ const ChatRoom = ({ route, navigation }) => {
     "Can you make a study guide from this lecture?",
   ];
 
+  const allMessageSuggestionsForQuickChatroom = [
+    "What are some effective study techniques for better retention?",
+    "Can you suggest strategies for managing study time efficiently?",
+    "How can I stay motivated throughout the semester?",
+    "What are the best practices for taking and organizing notes?",
+    "How can I improve my reading comprehension for academic texts?",
+    "What are some tips for preparing for exams effectively?",
+    "How can I develop a productive study routine?",
+    "What are some techniques for minimizing distractions while studying?",
+    "How can I balance studying with other responsibilities and activities?",
+    "What are some strategies for working on long-term projects or assignments?",
+    "How can I enhance my critical thinking skills for better academic performance?",
+    "What are some methods for effectively summarizing and reviewing study material?",
+    "How can I improve my writing skills for research papers and essays?",
+    "What are some tips for successful group study sessions?",
+    "How can I handle academic pressure and stress more effectively?",
+    "What are some effective ways to use feedback from professors for improvement?",
+    "How can I develop better memorization techniques for exams?",
+    "What are some strategies for setting and achieving academic goals?",
+    "How can I use technology to support my studies?",
+    "What are some tips for staying organized with assignments and deadlines?",
+  ];
+
   useEffect(() => {
     const unsubscribe = listenToMessages(
       userData.email,
@@ -100,8 +124,9 @@ const ChatRoom = ({ route, navigation }) => {
         // Assuming you only want to get `userDocs` from the first chat room
         if (chatRoomsData.length > 0) {
           const userDocsData = chatRoomsData[0].userDocs;
+          setChatroomSubject(chatRoomsData[0].subjects[0]);
           setUserDocs(userDocsData);
-          // console.log("Chat Rooms: ", userDocs);
+          // console.log("Chat Rooms subject: ", chatRoomsData[0].subjects[0]);
         } else {
           console.log("No chat rooms found");
         }
@@ -265,10 +290,15 @@ const ChatRoom = ({ route, navigation }) => {
       )}
       {messages.length === 0 && (
         <SuggestionMessage
-          suggestions={allMessageSuggestions}
+          suggestions={
+            chatroomSubject === "Quick Chat"
+              ? allMessageSuggestionsForNormalChatroom
+              : allMessageSuggestionsForQuickChatroom
+          }
           onSendMessage={handleSendMessage}
         />
       )}
+
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}

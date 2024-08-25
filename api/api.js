@@ -45,7 +45,7 @@ const transcriptAudio = async (filePath) => {
       headers: {
         "Content-Type": "multipart/form-data",
       },
-      timeout: 6000000, // 10 minutes
+      timeout: 12000000, // 20 minutes
       maxRedirects: 5,
     });
 
@@ -84,14 +84,14 @@ const purgeTranscript = async (transcript) => {
   }
 };
 
-const summarizeTranscript = async (purgedTranscript) => {
+const summarizeTranscript = async (purgedTranscript, language) => {
   console.log("Summarize Transcript: ", purgedTranscript);
   try {
     const response = await axios.post(
       SERVER_URL + "/summarize/",
       {
         purged_transcript: purgedTranscript,
-        language: "English",
+        language: language,
       },
       { timeout: 3000000 } // 5 minutes
     );

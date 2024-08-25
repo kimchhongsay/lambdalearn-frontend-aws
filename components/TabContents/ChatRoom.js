@@ -259,7 +259,7 @@ const ChatRoom = () => {
         quickChatLanguage, // Use predefined language for quick chat
         currentDate, // Use current date as start date
         currentDate, // Use current date as end date (or you can leave it empty)
-        ["Quick Chat"] // Empty summaries for quick chat
+        "Quick Chat" // Empty summaries for quick chat
       );
 
       setState((prevState) => ({

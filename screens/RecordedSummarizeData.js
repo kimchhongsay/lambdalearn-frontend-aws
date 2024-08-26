@@ -246,6 +246,7 @@ const RecordedSummarizeData = ({ route, navigation }) => {
             purgedTranscript,
             "English"
           );
+
           summarizedText = await translateText(EnSummarizedText, language);
         } else {
           summarizedText = await summarizeTranscript(
@@ -253,6 +254,10 @@ const RecordedSummarizeData = ({ route, navigation }) => {
             language
           );
         }
+        await saveToAsyncStorage(
+          `${filePath}_summarized_${language}`,
+          summarizedText
+        );
 
         setState((prevState) => ({
           ...prevState,

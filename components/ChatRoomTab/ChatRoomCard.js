@@ -82,7 +82,7 @@ const ChatRoomCard = ({ chatRoom, onPress, onDelete }) => {
         <TouchableOpacity
           onPress={handleClickChatRoom}
           onLongPress={() => {
-            longPressTimeout.current = setTimeout(handleLongPress, 50);
+            longPressTimeout.current = setTimeout(handleLongPress, 200);
           }}
           onPressOut={handlePressOut}>
           <LinearGradient

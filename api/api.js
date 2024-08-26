@@ -412,7 +412,7 @@ const deleteChatRoom = async (userEmail, chatRoomId) => {
 // Function to send message to FastAPI server
 const sendMessageToServer = async (userDocs, historyMessages, userMessage) => {
   const response = await axios.post(
-    `${SERVER_URL}/chat`,
+    `${SERVER_URL}/chat/`,
     { userDocs, historyMessages, userMessage },
     { headers: { "Content-Type": "application/json" } }
   );

@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -13,11 +12,10 @@ import {
 } from "react-native";
 import {
   addMessageToFirestore,
+  fetchEachChatroomData,
+  fetchMessages,
   listenToMessages,
   sendMessageToServer,
-  fetchChatRoom,
-  getUserDocRef,
-  fetchMessages,
 } from "../api/api";
 
 // Import the separate components
@@ -115,27 +113,41 @@ const ChatRoom = ({ route, navigation }) => {
     return () => unsubscribe();
   }, [chatRoomId, userData.email]);
 
-  useEffect(() => {
-    const fetchUserDocs = async () => {
-      try {
-        const userDocRef = getUserDocRef(userData.email, chatRoomId);
-        const chatRoomsData = await fetchChatRoom(userDocRef);
+  const fetchUserDocs = async (chatRoomId) => {
+    try {
+      const chatRoomsData = await fetchEachChatroomData(
+        userData.email,
+        chatRoomId
+      );
+      // console.log("Fetched Chatroom Data:", chatRoomsData); // Debugging line
 
-        // Assuming you only want to get `userDocs` from the first chat room
-        if (chatRoomsData.length > 0) {
-          const userDocsData = chatRoomsData[0].userDocs;
-          setChatroomSubject(chatRoomsData[0].subjects[0]);
-          setUserDocs(userDocsData);
-          // console.log("Chat Rooms subject: ", chatRoomsData[0].subjects[0]);
-        } else {
-          console.log("No chat rooms found");
-        }
-      } catch (error) {
-        console.error("Error fetching user docs: ", error);
+      if (chatRoomsData && typeof chatRoomsData === "object") {
+        const userDocsData = chatRoomsData.userDocs;
+        const subject = chatRoomsData.subjects[0]; // Accessing the first subject
+
+        // Log the data to ensure correct values are being set
+        // console.log("User Docs:", userDocsData);
+        // console.log("Subject:", subject);
+
+        setChatroomSubject(subject); // Updating state here
+        setUserDocs(userDocsData);
+      } else {
+        console.log("No chat rooms found or data is not an object");
       }
-    };
-    fetchUserDocs();
-  }, [chatRoomId, userData.email]);
+    } catch (error) {
+      console.error("Error fetching user docs: ", error);
+    }
+  };
+
+  useEffect(() => {
+    if (chatRoomId) {
+      fetchUserDocs(chatRoomId);
+    }
+  }, [chatRoomId]); // Ensure this only re-fetches when chatRoomId changes
+
+  useEffect(() => {
+    console.log("Chatroom Subject updated:", chatroomSubject); // Verify state change
+  }, [chatroomSubject]); // This will run every time chatroomSubject changes
 
   const getHistoryMessages = async () => {
     const userEmail = userData.email;
@@ -152,23 +164,25 @@ const ChatRoom = ({ route, navigation }) => {
         const messagesArray = response;
 
         // Format the messages
-        const formattedMessages = messagesArray.map((message) => {
-          const formattedTimestamp = new Date(
-            message.timestamp
-          ).toLocaleString();
+        // const formattedMessages = messagesArray.map((message) => {
+        //   const formattedTimestamp = new Date(
+        //     message.timestamp
+        //   ).toLocaleString();
 
-          // Determine role and format accordingly
-          const role = message.role === "user" ? "user" : "model";
-          const parts =
-            role === "user"
-              ? [`${message.text}, send at ${formattedTimestamp}`]
-              : [`${message.text}, response at ${formattedTimestamp}`];
+        //   // Determine role and format accordingly
+        //   const role = message.role === "user" ? "user" : "model";
+        //   const parts =
+        //     // role === "user"
+        //     //   ? [`${message.text}, send at ${formattedTimestamp}`]
+        //     //   : [`${message.text}, response at ${formattedTimestamp}`];
+        //     role === "user" ? [`${message.text}`] : [`${message.text}`];
 
-          return { role, parts };
-        });
+        //   return { role, parts };
+        // });
 
         // Set the formatted messages to state
-        setHistoryMessages(formattedMessages);
+        setHistoryMessages(messagesArray);
+        console.log("Message history array: ", messagesArray);
       } else {
         console.error("Unexpected response structure or no data available.");
       }
@@ -237,11 +251,6 @@ const ChatRoom = ({ route, navigation }) => {
       style={styles.container}
       // behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={100}>
-      {/* <View style={styles.header}>
-        <Text style={styles.subjectSelectText}>Subjects Selected: </Text>
-        <Text style={styles.roomName}>{chatRoomName}</Text>
-      </View> */}
-
       {messages.length === 0 ? (
         <View style={styles.emptyStateContainer}>
           <TouchableOpacity
@@ -288,12 +297,12 @@ const ChatRoom = ({ route, navigation }) => {
           />
         </View>
       )}
-      {messages.length === 0 && (
+      {messages.length === 0 && !isLoading && (
         <SuggestionMessage
           suggestions={
             chatroomSubject === "Quick Chat"
-              ? allMessageSuggestionsForNormalChatroom
-              : allMessageSuggestionsForQuickChatroom
+              ? allMessageSuggestionsForQuickChatroom
+              : allMessageSuggestionsForNormalChatroom
           }
           onSendMessage={handleSendMessage}
         />

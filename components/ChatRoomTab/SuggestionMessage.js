@@ -15,8 +15,9 @@ const SuggestionMessage = ({ suggestions, onSendMessage }) => {
       const shuffled = [...suggestions].sort(() => 0.5 - Math.random());
       return shuffled.slice(0, 5);
     };
+
     setRandomSuggestions(getRandomSuggestions());
-  }, []);
+  }, [suggestions]); // Add `suggestions` to the dependency array
 
   return (
     <View style={styles.suggestionsContainer}>
@@ -40,7 +41,6 @@ const styles = StyleSheet.create({
     marginBottom: 10, // Add some space between suggestions and input
   },
   suggestionButton: {
-    // backgroundColor: "#f2f2f2",
     borderColor: "#007bff",
     borderWidth: 1,
     padding: 10,

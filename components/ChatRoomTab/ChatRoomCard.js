@@ -33,10 +33,10 @@ const ChatRoomCard = ({ chatRoom, onPress, onDelete }) => {
 
   const handleLongPress = () => {
     setLongPressActivated(true);
+    Vibration.vibrate();
   };
 
   const handlePressOut = () => {
-    Vibration.vibrate();
     clearTimeout(longPressTimeout.current);
     setLongPressActivated(false);
   };
@@ -92,7 +92,10 @@ const ChatRoomCard = ({ chatRoom, onPress, onDelete }) => {
             end={{ x: 1, y: 1 }}>
             <View style={styles.content}>
               <View style={styles.header}>
-                <Text style={styles.subject}>
+                <Text
+                  style={styles.subject}
+                  numberOfLines={1}
+                  ellipsizeMode="tail">
                   {chatRoom.subjects.join(", ")}
                 </Text>
                 <Text style={styles.createdAt}>{chatRoom.createdAt}</Text>

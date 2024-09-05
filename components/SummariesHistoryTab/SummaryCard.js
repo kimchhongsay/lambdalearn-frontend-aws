@@ -93,7 +93,12 @@ const SummaryCard = ({ summary, onDelete }) => {
             end={{ x: 1, y: 1 }}>
             <View style={styles.content}>
               <View style={styles.header}>
-                <Text style={styles.subject}>{summary.Subject}</Text>
+                <Text
+                  style={styles.subject}
+                  numberOfLines={1}
+                  ellipsizeMode="tail">
+                  {summary.Subject}
+                </Text>
                 <Text style={styles.createdAt}>
                   {new Date(summary.Date.seconds * 1000).toLocaleString()}
                 </Text>

@@ -74,7 +74,12 @@ const RecordingItem = ({ subject, title, duration, datetime, filePath }) => {
             style={styles.audioIcon}
           />
           <View style={styles.listItem}>
-            <Text style={styles.listItemTitle}>{title}</Text>
+            <Text
+              style={styles.listItemTitle}
+              numberOfLines={1}
+              ellipsizeMode="tail">
+              {title}
+            </Text>
             <View style={styles.listItemDetails}>
               <Text style={styles.listItemDuration}>{duration}</Text>
               <Text style={styles.listItemDate}>{datetime}</Text>

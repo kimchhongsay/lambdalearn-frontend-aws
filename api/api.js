@@ -311,7 +311,7 @@ const getSummariesFromFirestore = async (
       formatSummarize = summaries
         .map(
           (item, index) =>
-            `Summary ${index + 1}:\n` +
+            `Summary ${index + 1} (Subject: ${item.Subject}):\n` + // Add subject name here
             `  Text: ${item.Text}\n` +
             `  Summarize Date: ${new Date(
               item.Date.seconds * 1000
@@ -515,6 +515,30 @@ const fetchMessages = async (userEmail, chatRoomId) => {
   }
 };
 
+// Function to fetch all the data of each chatroom data
+const fetchEachChatroomData = async (userEmail, chatRoomId) => {
+  try {
+    // Construct the document path dynamically
+    const chatRoomDocRef = doc(
+      db,
+      `Users/${userEmail}/chatrooms/${chatRoomId}`
+    );
+    const chatRoomDocSnap = await getDoc(chatRoomDocRef);
+
+    if (chatRoomDocSnap.exists()) {
+      const eachChatRoomData = chatRoomDocSnap.data();
+      // console.log("Each Chat Room Data:", eachChatRoomData);
+      return eachChatRoomData;
+    } else {
+      console.log("Each Chat Room Data No such document!");
+      return null;
+    }
+  } catch (error) {
+    console.error("Error fetching chat room document:", error);
+    return null;
+  }
+};
+
 // _____________________________________________________________________________
 // Function for Summarize History
 const getAllSummariesFromFirestore = async (userEmail) => {
@@ -534,6 +558,57 @@ const getAllSummariesFromFirestore = async (userEmail) => {
     throw error;
   }
 };
+
+// ____________________________________________________________________________________________
+// Delete all data inside a user's document
+// Main function to delete all data inside a user's document
+// Helper function to delete all documents within a collection
+const deleteCollectionDocuments = async (collectionRef) => {
+  const querySnapshot = await getDocs(collectionRef);
+  const batch = writeBatch(db);
+
+  querySnapshot.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+
+  await batch.commit();
+};
+
+// Main function to delete all data inside a user's document
+const deleteAllUserData = async (userEmail) => {
+  try {
+    // Get user document reference
+    const userDocRef = doc(db, "Users", userEmail);
+
+    // List of subcollections that need to be deleted
+    const subCollections = ["summaries", "chatrooms"];
+
+    for (const subCollectionName of subCollections) {
+      const subCollectionRef = collection(userDocRef, subCollectionName);
+      await deleteCollectionDocuments(subCollectionRef);
+
+      // If subcollections contain nested collections, add logic to delete them here
+      if (subCollectionName === "chatrooms") {
+        const chatRoomDocs = await getDocs(subCollectionRef);
+        for (const chatRoomDoc of chatRoomDocs.docs) {
+          const messagesRef = collection(chatRoomDoc.ref, "messages");
+          await deleteCollectionDocuments(messagesRef); // Delete messages subcollection
+        }
+      }
+    }
+
+    // Finally, delete the user document itself if desired (uncomment the next line if needed)
+    // await deleteDoc(userDocRef);
+
+    console.log(
+      `All data inside user document '${userEmail}' deleted successfully!`
+    );
+  } catch (error) {
+    console.error("Error deleting all data inside user document:", error);
+    throw error;
+  }
+};
+
 export {
   createChatRoom,
   deleteSummaryFromFirestore,
@@ -558,4 +633,6 @@ export {
   fetchMessages,
   getAllSummariesFromFirestore,
   encodedFilePath,
+  fetchEachChatroomData,
+  deleteAllUserData,
 };

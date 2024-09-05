@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { auth } from "../firebaseConfig";
 import { MyContext } from "../hooks/MyContext";
+import { deleteAllUserData } from "../api/api";
 
 const Sidebar = ({ navigation, setUserInfo }) => {
   const [refreshing, setRefreshing] = useState(false);
@@ -50,6 +51,7 @@ const Sidebar = ({ navigation, setUserInfo }) => {
               // Clear data from document directory
               const docDir = FileSystem.documentDirectory;
               const docFiles = await FileSystem.readDirectoryAsync(docDir);
+              await deleteAllUserData(userEmail);
               await Promise.all(
                 docFiles.map(async (file) => {
                   const sanitizedEmail = userEmail.replace(/[@.]/g, "_");

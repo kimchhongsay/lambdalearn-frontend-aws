@@ -34,14 +34,15 @@ import {
 import { MyContext } from "../hooks/MyContext";
 
 const summarizeLanguageOption = [
-  { value: "Thai", label: "Thai" },
   { value: "English", label: "English" },
   { value: "Khmer", label: "Khmer" },
+  { value: "Thai", label: "Thai" },
+  { value: "Myanmar", label: "Myanmar" },
+  { value: "Vietnamese", label: "Vietnamese" },
   { value: "French", label: "French" },
   { value: "Japanese", label: "Japanese" },
   { value: "Korean", label: "Korean" },
   { value: "Chinese", label: "Chinese" },
-  { value: "Vietnamese", label: "Vietnamese" },
   { value: "Indonesian", label: "Indonesian" },
   { value: "Filipino", label: "Filipino" },
 ];

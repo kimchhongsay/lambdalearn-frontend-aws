@@ -161,28 +161,17 @@ const ChatRoom = ({ route, navigation }) => {
 
       // Ensure the response is an array
       if (Array.isArray(response)) {
-        const messagesArray = response;
-
-        // Format the messages
-        // const formattedMessages = messagesArray.map((message) => {
-        //   const formattedTimestamp = new Date(
-        //     message.timestamp
-        //   ).toLocaleString();
-
-        //   // Determine role and format accordingly
-        //   const role = message.role === "user" ? "user" : "model";
-        //   const parts =
-        //     // role === "user"
-        //     //   ? [`${message.text}, send at ${formattedTimestamp}`]
-        //     //   : [`${message.text}, response at ${formattedTimestamp}`];
-        //     role === "user" ? [`${message.text}`] : [`${message.text}`];
-
-        //   return { role, parts };
-        // });
+        // Convert messagesArray to match the expected format
+        const formattedMessages = response.map((message) => ({
+          role: message.role,
+          parts: [message.text], // Converts text into parts array
+        }));
 
         // Set the formatted messages to state
-        setHistoryMessages(messagesArray);
-        console.log("Message history array: ", messagesArray);
+        setHistoryMessages(formattedMessages);
+
+        console.log("Message history array:", response);
+        console.log("Message history formattedMessages:", formattedMessages);
       } else {
         console.error("Unexpected response structure or no data available.");
       }
@@ -190,6 +179,7 @@ const ChatRoom = ({ route, navigation }) => {
       console.error("Error fetching messages:", error);
     }
   };
+
   useEffect(() => {
     if (chatRoomId && userData.email) {
       getHistoryMessages();
@@ -222,7 +212,7 @@ const ChatRoom = ({ route, navigation }) => {
           // Send the message to the server
           const botResponseText = await sendMessageToServer(
             userDocs,
-            historyMessages, // Now using the updated history
+            historyMessages,
             messageText
           );
 

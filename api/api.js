@@ -15,6 +15,7 @@ import {
   onSnapshot,
   addDoc,
   writeBatch,
+  collectionGroup,
 } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import { format } from "date-fns";
@@ -561,8 +562,40 @@ const getAllSummariesFromFirestore = async (userEmail) => {
 
 // ____________________________________________________________________________________________
 // Delete all data inside a user's document
-// Main function to delete all data inside a user's document
+const deleteAllUserData = async (userEmail) => {
+  try {
+    // 1. Delete Summaries
+    const summariesRef = collection(db, "Users", userEmail, "summaries");
+    await deleteCollectionDocuments(summariesRef);
+
+    // 2. Delete Chatrooms and their Messages
+    const chatroomsRef = collection(db, "Users", userEmail, "chatrooms");
+    const chatroomsSnapshot = await getDocs(chatroomsRef);
+
+    for (const chatroomDoc of chatroomsSnapshot.docs) {
+      // Delete messages subcollection within each chatroom
+      const messagesRef = collection(chatroomDoc.ref, "messages");
+      await deleteCollectionDocuments(messagesRef);
+
+      // Delete the chatroom document itself
+      await deleteDoc(chatroomDoc.ref);
+    }
+
+    // 3. Finally, delete the user document
+    const userDocRef = doc(db, "Users", userEmail);
+    await deleteDoc(userDocRef);
+
+    console.log(
+      `All data inside user document '${userEmail}' deleted successfully!`
+    );
+  } catch (error) {
+    console.error("Error deleting all data inside user document:", error);
+    throw error;
+  }
+};
+
 // Helper function to delete all documents within a collection
+// (You can keep this function as it is)
 const deleteCollectionDocuments = async (collectionRef) => {
   const querySnapshot = await getDocs(collectionRef);
   const batch = writeBatch(db);
@@ -572,41 +605,6 @@ const deleteCollectionDocuments = async (collectionRef) => {
   });
 
   await batch.commit();
-};
-
-// Main function to delete all data inside a user's document
-const deleteAllUserData = async (userEmail) => {
-  try {
-    // Get user document reference
-    const userDocRef = doc(db, "Users", userEmail);
-
-    // List of subcollections that need to be deleted
-    const subCollections = ["summaries", "chatrooms"];
-
-    for (const subCollectionName of subCollections) {
-      const subCollectionRef = collection(userDocRef, subCollectionName);
-      await deleteCollectionDocuments(subCollectionRef);
-
-      // If subcollections contain nested collections, add logic to delete them here
-      if (subCollectionName === "chatrooms") {
-        const chatRoomDocs = await getDocs(subCollectionRef);
-        for (const chatRoomDoc of chatRoomDocs.docs) {
-          const messagesRef = collection(chatRoomDoc.ref, "messages");
-          await deleteCollectionDocuments(messagesRef); // Delete messages subcollection
-        }
-      }
-    }
-
-    // Finally, delete the user document itself if desired (uncomment the next line if needed)
-    // await deleteDoc(userDocRef);
-
-    console.log(
-      `All data inside user document '${userEmail}' deleted successfully!`
-    );
-  } catch (error) {
-    console.error("Error deleting all data inside user document:", error);
-    throw error;
-  }
 };
 
 export {

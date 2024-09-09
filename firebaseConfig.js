@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDdA0Y1opOTB8aRCdEDHqapdKDU1ft5CkM",
@@ -9,6 +10,7 @@ const firebaseConfig = {
   storageBucket: "alcademy-assist-3fce2.appspot.com",
   messagingSenderId: "185963385145",
   appId: "1:185963385145:web:0712599899d7c727f558e8",
+  measurementId: "G-DKQHECS7R0",
 };
 
 const app = initializeApp(firebaseConfig);

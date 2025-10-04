@@ -1,4 +1,4 @@
-rootProject.name = 'alcademyassist'
+rootProject.name = 'lambdalearn'
 
 dependencyResolutionManagement {
   versionCatalogs {

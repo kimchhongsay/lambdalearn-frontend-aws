@@ -1,7 +1,7 @@
 {
-  "name": "alcademyassist",
+  "name": "lambdalearn",
   "version": "1.0.0",
-  "proxy":"https://nsc.ubru.ac.th",
+  "proxy": "http://localhost:8000",
   "scripts": {
     "start": "expo start --dev-client",
     "android": "expo run:android",
@@ -23,6 +23,7 @@
     "@types/react-native-dotenv": "^0.2.2",
     "axios": "^1.7.2",
     "date-fns": "^3.6.0",
+    "eas-cli": "^16.20.1",
     "expo": "^51.0.22",
     "expo-application": "~5.9.1",
     "expo-auth-session": "~5.5.2",

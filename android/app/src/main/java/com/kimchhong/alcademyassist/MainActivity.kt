@@ -1,4 +1,4 @@
-package com.kimchhong.alcademyassist
+package com.kimchhong.lambdalearn
 
 import android.os.Build
 import android.os.Bundle

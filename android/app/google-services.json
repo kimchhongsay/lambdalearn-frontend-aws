@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:185963385145:android:e3744778d29871b9f558e8",
         "android_client_info": {
-          "package_name": "com.kimchhong.alcademyassist"
+          "package_name": "com.kimchhong.lambdalearn"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "185963385145-o5k6dek5colpf07hkepr23pvnkm10vfu.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.kimchhong.alcademyassist",
+            "package_name": "com.kimchhong.lambdalearn",
             "certificate_hash": "7320e50e5f48be490da109ab3e3fd22c673eb7b6"
           }
         },

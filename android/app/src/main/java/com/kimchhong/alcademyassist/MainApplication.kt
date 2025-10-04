@@ -1,4 +1,4 @@
-package com.kimchhong.alcademyassist
+package com.kimchhong.lambdalearn
 
 import android.app.Application
 import android.content.res.Configuration

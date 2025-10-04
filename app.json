@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "alcademyassist",
-    "slug": "alcademyassist",
+    "name": "lambdalearn",
+    "slug": "lambdalearn",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,7 +12,11 @@
       "backgroundColor": "#f0f4f8"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kimchhong.lambdalearn",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +24,7 @@
         "backgroundColor": "#f0f4f8",
         "usesCleartextTraffic": true
       },
-      "package": "com.kimchhong.alcademyassist",
+      "package": "com.kimchhong.lambdalearn",
       "permissions": [
         "WRITE_EXTERNAL_STORAGE",
         "READ_EXTERNAL_STORAGE"
@@ -31,8 +35,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "8f90f9d2-d644-4c06-81bb-c3dc7f9374d8"
+        "projectId": "55602a5a-466a-4af2-a0ff-4bb2285988f8"
       }
-    }
+    },
+    "owner": "kimchhong"
   }
 }

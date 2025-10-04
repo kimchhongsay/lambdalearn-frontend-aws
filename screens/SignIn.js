@@ -27,11 +27,10 @@ export default function SignIn({ promptAsync }) {
 
           <Text style={styles.title}>Sign in to</Text>
           <Text style={styles.title}>
-            <Text style={{ color: "#075eec" }}> Alcademy Assist</Text>
+            <Text style={{ color: "#075eec" }}> Lampda Learn</Text>
           </Text>
           <Text style={styles.subtitle}>
-            Transforming Education with Intelligent Solutions for Modern
-            Learners
+            Where Individual Learning Becomes Shared Knowledge
           </Text>
         </View>
         <View style={styles.form}>

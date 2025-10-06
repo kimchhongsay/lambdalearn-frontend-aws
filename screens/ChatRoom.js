@@ -1,4 +1,4 @@
-import { serverTimestamp } from "firebase/firestore";
+// import { serverTimestamp } from "firebase/firestore"; // Removed - using Date.now() or AWS timestamp
 import LottieView from "lottie-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {

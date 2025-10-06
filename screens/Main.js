@@ -1,5 +1,5 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+// import { doc, getDoc, setDoc } from "firebase/firestore"; // Removed - using AWS DynamoDB
 import React, { useContext, useEffect, useState } from "react";
 import {
   Image,
@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import DynamicBody from "../components/DynamicBody";
 import TabButton from "../components/TabButton";
-import { db } from "../firebaseConfig";
+// import { db } from "../firebaseConfig"; // Removed - using AWS DynamoDB
 import { MyContext } from "../hooks/MyContext";
 
 const Main = ({ navigation, route }) => {
@@ -39,23 +39,18 @@ const Main = ({ navigation, route }) => {
     const checkAndSaveUserEmail = async () => {
       if (userInfo?.email) {
         try {
-          // Check if the user document already exists
-          const userDocRef = doc(db, "Users", userInfo.email);
-          const userDocSnap = await getDoc(userDocRef);
           setUserEmail(userInfo.email);
-          if (!userDocSnap.exists()) {
-            // User document doesn't exist, so create it
-            await setDoc(userDocRef, {
-              email: userInfo.email,
-              // Add other user data if needed
-            });
-            setUserEmail(userInfo.email);
-            console.log("User email saved to Firestore");
-          } else {
-            console.log("User already exists in Firestore");
-          }
+          // TODO: Replace with AWS DynamoDB user creation
+          // const dynamoDBService = require('../services/DynamoDBServiceReal');
+          // await dynamoDBService.createUser({
+          //   userId: userInfo.email,
+          //   email: userInfo.email,
+          //   name: userInfo.displayName,
+          //   photoURL: userInfo.photoURL
+          // });
+          console.log("User email set, AWS DynamoDB integration pending");
         } catch (error) {
-          console.error("Error checking/saving user email:", error);
+          console.error("Error processing user data:", error);
         }
       }
       incrementRefreshKey();

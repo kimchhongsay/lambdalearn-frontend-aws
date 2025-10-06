@@ -3,13 +3,15 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import SignIn from "./screens/SignIn";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
+// Firebase auth removed - keeping Google provider for compatibility
 import {
   GoogleAuthProvider,
-  onAuthStateChanged,
-  signInWithCredential,
+  // onAuthStateChanged,    // Removed - using AWS Cognito
+  // signInWithCredential,  // Removed - using AWS Cognito
 } from "firebase/auth";
-import { auth } from "./firebaseConfig";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
+// Firebase imports removed - using AWS services
+// import { auth } from "./firebaseConfig";
+// import { getFirestore, doc, setDoc } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import RecordedSummarizeData from "./screens/RecordedSummarizeData";
 import SummaryDetail from "./screens/SummaryDetail";
@@ -34,7 +36,7 @@ import MyProvider from "./hooks/MyContext";
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
-const firestore = getFirestore();
+// const firestore = getFirestore(); // Removed - using AWS DynamoDB
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -94,14 +96,14 @@ export default function App() {
   };
 
   const storeUserData = async (user) => {
-    const userDoc = doc(firestore, "Users", user.email);
-    const userData = {
-      username: user.displayName,
-      displayName: user.displayName,
-      email: user.email,
-      imageUrl: user.photoURL,
-    };
-    await setDoc(userDoc, userData, { merge: true });
+    try {
+      await AsyncStorage.setItem("@user", JSON.stringify(user));
+      setUserInfo(user);
+      // TODO: Save to AWS DynamoDB using DynamoDBServiceReal
+      console.log("User stored locally, AWS DynamoDB integration pending");
+    } catch (error) {
+      console.error("Error storing user data:", error);
+    }
   };
 
   React.useEffect(() => {
@@ -111,27 +113,31 @@ export default function App() {
   React.useEffect(() => {
     if (response?.type === "success") {
       const { id_token } = response.params;
-      const credential = GoogleAuthProvider.credential(id_token);
-      signInWithCredential(auth, credential).then((result) => {
-        if (result.user) {
-          storeUserData(result.user);
-        }
-      });
+      // Firebase auth removed - using Google token directly
+      // const credential = GoogleAuthProvider.credential(id_token);
+      // signInWithCredential(auth, credential).then((result) => {
+      //   if (result.user) {
+      //     storeUserData(result.user);
+      //   }
+      // });
+
+      // TODO: Integrate with AWS Cognito for Google sign-in
+      console.log("Google sign-in success, AWS integration pending");
     }
   }, [response]);
 
-  React.useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUserInfo(user);
-        await AsyncStorage.setItem("@user", JSON.stringify(user));
-      } else {
-        setUserInfo(null);
-      }
-    });
-
-    return () => unsub();
-  }, []);
+  // Firebase auth state removed - using AWS Cognito
+  // React.useEffect(() => {
+  //   const unsub = onAuthStateChanged(auth, async (user) => {
+  //     if (user) {
+  //       setUserInfo(user);
+  //       await AsyncStorage.setItem("@user", JSON.stringify(user));
+  //     } else {
+  //       setUserInfo(null);
+  //     }
+  //   });
+  //   return () => unsub();
+  // }, []);
 
   const clearData = () => {
     console.log("Clearing data...");

@@ -1,24 +1,17 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  setDoc,
-  Timestamp,
-  updateDoc,
-  where,
-  orderBy,
-  onSnapshot,
-  addDoc,
-  writeBatch,
-  collectionGroup,
-} from "firebase/firestore";
-import { db } from "../firebaseConfig";
+// Firebase imports removed - using AWS services
+// import {
+//   collection, deleteDoc, doc, getDoc, getDocs, query, setDoc,
+//   Timestamp, updateDoc, where, orderBy, onSnapshot, addDoc,
+//   writeBatch, collectionGroup,
+// } from "firebase/firestore";
+// import { db } from "../firebaseConfig";
 import { format } from "date-fns";
+
+// Import AWS services
+// TODO: Uncomment when ready for full AWS integration
+// import DynamoDBService from '../services/DynamoDBServiceReal';
 
 // _____________________________________________________________________________
 // The following functions are used in the Transcript component in the snippet that use in RecordedSummarizeData.js
@@ -28,8 +21,11 @@ const encodedFilePath = (filePath) => {
   return filePath.replace(/\//g, "%2F");
 };
 
+// Removed Firebase getUserDocRef - using AWS DynamoDB
 const getUserDocRef = (userEmail) => {
-  return doc(db, "Users", userEmail);
+  // TODO: Replace with AWS DynamoDB user reference
+  console.log("getUserDocRef called for:", userEmail);
+  return null; // Placeholder - implement with DynamoDB
 };
 
 const transcriptAudio = async (filePath) => {
@@ -607,30 +603,36 @@ const deleteCollectionDocuments = async (collectionRef) => {
   await batch.commit();
 };
 
+// Export functions - Firebase functions marked for AWS DynamoDB migration
 export {
-  createChatRoom,
-  deleteSummaryFromFirestore,
-  fetchChatRoom,
-  getDistinctLanguageFromFirestore,
-  getDistinctSubjectsFromFirestore,
-  getFromAsyncStorage,
-  getSummariesFromFirestore,
-  getUserDocRef,
-  getUserDocSnap,
-  purgeTranscript,
-  removeFromAsyncStorage,
-  saveOrUpdateSummaryToFirestore,
-  saveToAsyncStorage,
-  summarizeTranscript,
+  // Core API functions (AWS ready)
   transcriptAudio,
   translateText,
-  deleteChatRoom,
+  summarizeTranscript,
   sendMessageToServer,
-  addMessageToFirestore,
-  listenToMessages,
-  fetchMessages,
-  getAllSummariesFromFirestore,
   encodedFilePath,
-  fetchEachChatroomData,
-  deleteAllUserData,
+
+  // AsyncStorage functions (keeping)
+  saveToAsyncStorage,
+  getFromAsyncStorage,
+  removeFromAsyncStorage,
+  purgeTranscript,
+
+  // Firebase functions - TODO: Replace with AWS DynamoDB equivalents
+  createChatRoom, // -> DynamoDB createChatroom
+  deleteSummaryFromFirestore, // -> DynamoDB deleteSummary
+  deleteAllUserData, // -> DynamoDB clearUserData
+  fetchChatRoom, // -> DynamoDB getChatrooms
+  getAllSummariesFromFirestore, // -> DynamoDB getAllSummaries
+  getDistinctLanguageFromFirestore, // -> DynamoDB getDistinctLanguages
+  getDistinctSubjectsFromFirestore, // -> DynamoDB getDistinctSubjects
+  getSummariesFromFirestore, // -> DynamoDB getSummaries
+  getUserDocRef, // -> DynamoDB getUserRef
+  getUserDocSnap, // -> DynamoDB getUser
+  saveOrUpdateSummaryToFirestore, // -> DynamoDB createSummary
+  addMessageToFirestore, // -> DynamoDB createMessage
+  listenToMessages, // -> DynamoDB queryMessages
+  fetchMessages, // -> DynamoDB getMessages
+  fetchEachChatroomData, // -> DynamoDB getChatroomData
+  deleteChatRoom, // -> DynamoDB deleteChatroom
 };

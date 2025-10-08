@@ -27,6 +27,11 @@ const ChatRoom = ({ route, navigation }) => {
   const [messageText, setMessageText] = useState("");
   const [messages, setMessages] = useState([]);
   const [historyMessages, setHistoryMessages] = useState([]);
+
+  // Debug: Log when messages state changes
+  useEffect(() => {
+    console.log("📨 Messages state updated:", messages.length, "messages");
+  }, [messages]);
   const flatListRef = useRef(null);
   const userData = route.params.userInfo;
   const [isLoading, setIsLoading] = useState(false);
@@ -104,6 +109,43 @@ const ChatRoom = ({ route, navigation }) => {
   ];
 
   useEffect(() => {
+    // Load existing messages immediately when entering chatroom
+    const loadExistingMessages = async () => {
+      try {
+        console.log("🔄 Loading existing messages for chatroom:", chatRoomId);
+        const existingMessages = await fetchMessages(
+          userData.email,
+          chatRoomId
+        );
+
+        if (Array.isArray(existingMessages)) {
+          console.log(
+            "✅ Loaded messages:",
+            existingMessages.length,
+            "messages"
+          );
+          setMessages(existingMessages);
+
+          // Scroll to bottom after loading messages
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        } else {
+          console.log("ℹ️  No existing messages found");
+          setMessages([]);
+        }
+      } catch (error) {
+        console.error("❌ Error loading existing messages:", error);
+        setMessages([]); // Set empty array on error
+      }
+    };
+
+    // Load messages immediately
+    if (chatRoomId && userData.email) {
+      loadExistingMessages();
+    }
+
+    // Set up listener for new messages
     const unsubscribe = listenToMessages(
       userData.email,
       chatRoomId,

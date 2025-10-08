@@ -1,5 +1,11 @@
 import * as React from "react";
-import { ActivityIndicator, StyleSheet, View, Text } from "react-native";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  View,
+  Text,
+  LogBox,
+} from "react-native";
 import SignIn from "./screens/SignIn";
 import SignUp from "./screens/SignUp";
 import CognitoTest from "./screens/CognitoTest";
@@ -10,6 +16,13 @@ import { signOut } from "aws-amplify/auth";
 import awsconfig from "./aws-exports-env";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DirectCognitoAuthService from "./services/DirectCognitoAuthService";
+
+// Suppress known third-party library warnings
+LogBox.ignoreLogs([
+  "Support for defaultProps will be removed",
+  "TNodeChildrenRenderer: Support for defaultProps",
+  "defaultProps will be removed from function components",
+]);
 
 console.log("App.js: Starting to load components...");
 import RecordedSummarizeData from "./screens/RecordedSummarizeData";

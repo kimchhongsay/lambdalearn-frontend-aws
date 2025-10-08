@@ -386,10 +386,20 @@ const addMessageToFirestore = async (userEmail, chatRoomId, message) => {
 };
 
 const listenToMessages = (userEmail, chatRoomId, setMessages) => {
+  let lastMessageCount = 0;
+
   const intervalId = setInterval(async () => {
     try {
       const messages = await fetchMessages(userEmail, chatRoomId);
-      setMessages(messages);
+
+      // Only update if message count changed (new messages received)
+      if (Array.isArray(messages) && messages.length !== lastMessageCount) {
+        console.log(
+          `New messages detected: ${messages.length} (was ${lastMessageCount})`
+        );
+        setMessages(messages);
+        lastMessageCount = messages.length;
+      }
     } catch (error) {
       // Ignore errors in polling
     }

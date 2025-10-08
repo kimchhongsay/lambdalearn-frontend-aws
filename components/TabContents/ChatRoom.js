@@ -71,13 +71,29 @@ const ChatRoom = () => {
   });
 
   const formatTimestamp = (timestamp) => {
-    if (!timestamp || typeof timestamp.seconds !== "number")
-      return "Invalid Date";
+    if (!timestamp) return "Invalid Date";
 
-    // Convert Firestore timestamp to JavaScript Date object
-    const date = new Date(
-      timestamp.seconds * 1000 + (timestamp.nanoseconds || 0) / 1000000
-    );
+    let date;
+
+    // Handle Firebase Firestore timestamp format
+    if (typeof timestamp === "object" && timestamp.seconds) {
+      date = new Date(
+        timestamp.seconds * 1000 + (timestamp.nanoseconds || 0) / 1000000
+      );
+    }
+    // Handle ISO string format from AWS backend
+    else if (typeof timestamp === "string") {
+      date = new Date(timestamp);
+    }
+    // Handle direct Date object or milliseconds
+    else {
+      date = new Date(timestamp);
+    }
+
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return "Invalid Date";
+    }
 
     // Format Date as mm/dd/yy
     const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-based
@@ -94,6 +110,11 @@ const ChatRoom = () => {
 
       const formattedChatRooms = chatRooms.map((chatRoom) => ({
         ...chatRoom,
+        // Ensure compatibility with backend data structure
+        chatRoomId: chatRoom.chatRoomId || chatRoom.chatroomId,
+        subjects:
+          chatRoom.subjects || (chatRoom.subject ? [chatRoom.subject] : []),
+        // UI helper properties
         swipeValue: new Animated.Value(0),
         panResponder: PanResponder.create({
           onStartShouldSetPanResponder: () => true,
@@ -121,8 +142,11 @@ const ChatRoom = () => {
             }).start();
           },
         }),
-        startDate: formatTimestamp(chatRoom.startDate),
-        endDate: formatTimestamp(chatRoom.endDate),
+        // Format dates properly, use createdAt as fallback for missing dates
+        startDate: formatTimestamp(chatRoom.startDate || chatRoom.createdAt),
+        endDate: formatTimestamp(
+          chatRoom.endDate || chatRoom.lastActivity || chatRoom.createdAt
+        ),
         createdAt: formatTimestamp(chatRoom.createdAt),
       }));
 

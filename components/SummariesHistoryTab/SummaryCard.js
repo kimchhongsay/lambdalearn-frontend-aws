@@ -17,14 +17,41 @@ const SummaryCard = ({ summary, onDelete }) => {
   const [longPressActivated, setLongPressActivated] = useState(false);
   const longPressTimeout = useRef(null);
 
+  // Helper function to format date from various formats
+  const formatDate = (dateValue) => {
+    try {
+      if (!dateValue) return "Invalid Date";
+
+      // Handle Firebase Timestamp format (legacy)
+      if (dateValue.seconds && typeof dateValue.seconds === "number") {
+        return new Date(dateValue.seconds * 1000).toLocaleString();
+      }
+
+      // Handle ISO string format (new API)
+      if (typeof dateValue === "string") {
+        return new Date(dateValue).toLocaleString();
+      }
+
+      // Handle Date object
+      if (dateValue instanceof Date) {
+        return dateValue.toLocaleString();
+      }
+
+      return "Invalid Date";
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "Invalid Date";
+    }
+  };
+
   const handlePressedSummaryCard = () => {
     if (!longPressActivated) {
       navigation.navigate("SummaryDetail", {
         summaryId: summary.id,
-        language: summary.Language,
-        subject: summary.Subject,
-        summaryText: summary.Text,
-        datetime: new Date(summary.Date.seconds * 1000).toLocaleString(),
+        language: summary.language || summary.Language,
+        subject: summary.subject || summary.Subject,
+        summaryText: summary.content || summary.Text,
+        datetime: formatDate(summary.date || summary.Date),
       });
     }
   };
@@ -97,15 +124,17 @@ const SummaryCard = ({ summary, onDelete }) => {
                   style={styles.subject}
                   numberOfLines={1}
                   ellipsizeMode="tail">
-                  {summary.Subject}
+                  {summary.subject || summary.Subject}
                 </Text>
                 <Text style={styles.createdAt}>
-                  {new Date(summary.Date.seconds * 1000).toLocaleString()}
+                  {formatDate(summary.date || summary.Date)}
                 </Text>
               </View>
               <View style={styles.infoRow}>
-                <Text style={styles.language}>{summary.Language}</Text>
-                {/* <Text style={styles.text}>{summary.Text}</Text> */}
+                <Text style={styles.language}>
+                  {summary.language || summary.Language}
+                </Text>
+                {/* <Text style={styles.text}>{summary.content || summary.Text}</Text> */}
               </View>
             </View>
           </LinearGradient>

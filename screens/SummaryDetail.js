@@ -109,6 +109,16 @@ const SummaryDetail = ({ route, navigation }) => {
         message: removeHtmlTags(state.text),
       });
     } catch (error) {
+      // Handle user cancellation gracefully - this is normal behavior
+      if (
+        error.message.includes("User did not share") ||
+        error.message.includes("cancelled")
+      ) {
+        console.log("User cancelled sharing - this is normal");
+        return; // Exit silently, no error needed
+      }
+
+      // Only log actual errors
       console.error("Error sharing summary:", error);
     }
   };

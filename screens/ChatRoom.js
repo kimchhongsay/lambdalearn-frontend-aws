@@ -195,7 +195,7 @@ const ChatRoom = ({ route, navigation }) => {
       id: Date.now().toString(),
       text: messageText,
       role: "user",
-      timestamp: serverTimestamp(),
+      timestamp: new Date().toISOString(),
     };
 
     setMessages((prevMessages) => [...prevMessages, newMessage]);
@@ -221,10 +221,10 @@ const ChatRoom = ({ route, navigation }) => {
           }
 
           const botMessage = {
-            id: Date.now().toString() + 1,
+            id: (Date.now() + 1).toString(),
             text: botResponseText,
             role: "model",
-            timestamp: serverTimestamp(),
+            timestamp: new Date().toISOString(),
           };
 
           await addMessageToFirestore(userData.email, chatRoomId, botMessage);
@@ -264,7 +264,9 @@ const ChatRoom = ({ route, navigation }) => {
         <FlatList
           ref={flatListRef}
           data={messages}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item, index) =>
+            `message-${index}-${item.role}-${Date.now()}`
+          }
           renderItem={(props) => (
             <Message {...props} botAvatar={botAvatar} userAvatar={userAvatar} />
           )} // Pass botAvatar and userAvatar as props

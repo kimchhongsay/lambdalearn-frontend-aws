@@ -22,6 +22,15 @@ const RecordingItem = ({ subject, title, duration, datetime, filePath }) => {
           type: "audio/mpeg",
         });
       } catch (error) {
+        // Handle user cancellation gracefully - this is normal behavior
+        if (
+          error.message.includes("User did not share") ||
+          error.message.includes("cancelled")
+        ) {
+          console.log("User cancelled sharing - this is normal");
+          return; // Exit silently, no error needed
+        }
+
         console.error("Error sharing audio:", error);
         Alert.alert("Error", `Failed to share audio: ${error.message}`);
       }

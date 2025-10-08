@@ -3,16 +3,71 @@ import React from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import Markdown from "react-native-markdown-display";
 
+// Temporary Timestamp class for backward compatibility
+class Timestamp {
+  constructor(seconds, nanoseconds) {
+    this.seconds = seconds;
+    this.nanoseconds = nanoseconds;
+  }
+
+  toDate() {
+    return new Date(this.seconds * 1000 + (this.nanoseconds || 0) / 1000000);
+  }
+}
+
 const Message = ({ item, botAvatar, userAvatar }) => {
   const formatTimestamp = (timestamp) => {
-    if (timestamp instanceof Timestamp) {
-      const date = timestamp.toDate();
-      return date.toLocaleTimeString([], {
+    try {
+      if (!timestamp)
+        return new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+      // Handle Firebase Timestamp format (legacy)
+      if (timestamp instanceof Timestamp) {
+        const date = timestamp.toDate();
+        return date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      // Handle ISO string format
+      if (typeof timestamp === "string") {
+        return new Date(timestamp).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      // Handle Date object
+      if (timestamp instanceof Date) {
+        return timestamp.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      return new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (error) {
+      console.error("Error formatting timestamp:", error);
+      return new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       });
     }
-    return "Invalid Timestamp";
+  };
+
+  // Extract message text from parts array or text field
+  const getMessageText = (message) => {
+    if (message.parts && Array.isArray(message.parts)) {
+      return message.parts.join(" ");
+    }
+    return message.text || "";
   };
 
   return (
@@ -25,7 +80,7 @@ const Message = ({ item, botAvatar, userAvatar }) => {
         <>
           <Image source={botAvatar} style={styles.avatar} />
           <View style={styles.messageContent}>
-            <Markdown style={markdownStyles}>{item.text}</Markdown>
+            <Markdown style={markdownStyles}>{getMessageText(item)}</Markdown>
             <Text style={styles.timestamp}>
               {formatTimestamp(item.timestamp)}
             </Text>
@@ -36,12 +91,18 @@ const Message = ({ item, botAvatar, userAvatar }) => {
       {item.role === "user" && (
         <>
           <View style={styles.messageContent}>
-            <Text style={styles.messageText}>{item.text}</Text>
+            <Text style={styles.messageText}>{getMessageText(item)}</Text>
             <Text style={styles.timestamp}>
               {formatTimestamp(item.timestamp)}
             </Text>
           </View>
-          <Image source={{ uri: userAvatar }} style={styles.avatar} />
+          {userAvatar ? (
+            <Image source={{ uri: userAvatar }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.placeholderAvatar]}>
+              <Text style={styles.placeholderText}>👤</Text>
+            </View>
+          )}
         </>
       )}
     </View>
@@ -78,6 +139,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#888",
     marginTop: 5,
+  },
+  placeholderAvatar: {
+    backgroundColor: "#e0e0e0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  placeholderText: {
+    fontSize: 20,
+    color: "#666",
   },
 });
 const markdownStyles = {

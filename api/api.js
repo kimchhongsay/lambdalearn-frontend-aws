@@ -96,14 +96,19 @@ const purgeTranscript = async (transcript) => {
       { timeout: 3000000 } // 5 minutes
     );
 
-    console.log("Purged Transcript: ", response.data.purged_transcript);
+    console.log("Purge API Response: ", response.data);
     if (response.data.success) {
-      return response.data.data.purged_text;
+      const purgedText =
+        response.data.data?.purged_text || response.data.purged_transcript;
+      console.log("Purged Transcript: ", purgedText);
+      return purgedText;
     }
     throw new Error(response.data.error || "Purge failed");
   } catch (error) {
     console.error("Error purging transcript: ", error);
-    throw error;
+    // If purge fails, return original transcript as fallback
+    console.log("Using original transcript as fallback");
+    return transcript;
   }
 };
 

@@ -441,6 +441,15 @@ const RecordedSummarizeData = ({ route, navigation }) => {
       await Share.open(shareOptions);
       // alert("Summarized text shared successfully!");
     } catch (error) {
+      // Handle user cancellation gracefully - this is normal behavior
+      if (
+        error.message.includes("User did not share") ||
+        error.message.includes("cancelled")
+      ) {
+        console.log("User cancelled sharing - this is normal");
+        return; // Exit silently, no error needed
+      }
+
       console.error("Error sharing summarized text:", error);
       // alert(`Error sharing summarized text: ${error.message}`);
     }

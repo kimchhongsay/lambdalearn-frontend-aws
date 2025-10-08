@@ -1,46 +1,122 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   View,
   Text,
-  SafeAreaView,
-  Image,
+  TextInput,
   TouchableOpacity,
+  SafeAreaView,
+  Alert,
+  Image,
   StatusBar,
 } from "react-native";
+import DirectCognitoAuthService from "../services/DirectCognitoAuthService";
 
-export default function SignIn({ promptAsync }) {
+export default function SignIn({ navigation, onSignIn }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please enter both email and password");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await DirectCognitoAuthService.signIn(email, password);
+
+      if (result.success) {
+        // Call the parent component's onSignIn function
+        onSignIn();
+      } else {
+        if (result.error === "UserNotConfirmedException") {
+          Alert.alert(
+            "Verification Required",
+            "Please check your email for the verification code and verify your account first."
+          );
+        } else {
+          Alert.alert("Sign In Failed", result.message || "Please try again.");
+        }
+      }
+    } catch (error) {
+      let errorMessage = "Please try again.";
+      if (error.name === "NotAuthorizedException") {
+        errorMessage = "Incorrect email or password.";
+      } else if (error.name === "UserNotConfirmedException") {
+        errorMessage =
+          "Please verify your email first. Check your email for the verification code.";
+      } else if (error.name === "UserNotFoundException") {
+        errorMessage =
+          "No account found with this email. Please sign up first.";
+      }
+
+      Alert.alert("Sign In Failed", errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = () => {
+    navigation.navigate("SignUp");
+  };
+
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-      }}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f0f4f8" />
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Image
-            alt="App Logo"
-            resizeMode="contain"
-            style={styles.headerImg}
-            source={require("../assets/icon.png")}
-          />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-          <Text style={styles.title}>Sign in to</Text>
-          <Text style={styles.title}>
-            <Text style={{ color: "#075eec" }}> Lampda Learn</Text>
-          </Text>
-          <Text style={styles.subtitle}>
-            Where Individual Learning Becomes Shared Knowledge
-          </Text>
+      <View style={styles.header}>
+        <Image
+          source={require("../assets/images/owl-nobg.png")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <Text style={styles.title}>Lambda Learn</Text>
+        <Text style={styles.subtitle}>Sign in to your account</Text>
+      </View>
+
+      <View style={styles.form}>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Enter your email"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
         </View>
-        <View style={styles.form}>
-          <View style={styles.formAction}>
-            <TouchableOpacity onPress={() => promptAsync()}>
-              <View style={styles.btn}>
-                <Text style={styles.btnText}>Sign in</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Enter your password"
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
+
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleSignIn}
+          disabled={loading}>
+          <Text style={styles.buttonText}>
+            {loading ? "Signing In..." : "Sign In"}
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.signUpContainer}>
+          <Text style={styles.signUpText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={handleSignUp}>
+            <Text style={styles.signUpLink}>Sign Up</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>
@@ -49,67 +125,77 @@ export default function SignIn({ promptAsync }) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 24,
-    paddingHorizontal: 0,
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 0,
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  header: {
+    alignItems: "center",
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
+  logo: {
+    width: 80,
+    height: 80,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 31,
-    fontWeight: "700",
-    color: "#1D2A32",
-    marginBottom: 6,
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#333333",
+    marginBottom: 8,
   },
   subtitle: {
-    marginTop: 20,
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#929292",
-    paddingHorizontal: 24,
+    fontSize: 16,
+    color: "#666666",
   },
-  /** Header */
-  header: {
-    marginTop: "30%",
-    height: "50%",
-    alignItems: "center",
-    justifyContent: "center",
-    marginVertical: 36,
-  },
-  headerImg: {
-    width: 120,
-    height: 120,
-    alignSelf: "center",
-    marginBottom: 36,
-  },
-  /** Form */
   form: {
-    paddingHorizontal: 24,
-    justifyContent: "flex-end",
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 0,
+    paddingHorizontal: 30,
   },
-  formAction: {
-    marginTop: 4,
-    marginBottom: 16,
+  inputContainer: {
+    marginBottom: 20,
   },
-  /** Button */
-  btn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 30,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderWidth: 1,
-    backgroundColor: "#075eec",
-    borderColor: "#075eec",
-  },
-  btnText: {
-    fontSize: 18,
-    lineHeight: 26,
+  label: {
+    fontSize: 16,
     fontWeight: "600",
-    color: "#fff",
+    color: "#333333",
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#dddddd",
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    backgroundColor: "#f9f9f9",
+  },
+  button: {
+    backgroundColor: "#007AFF",
+    borderRadius: 8,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  buttonDisabled: {
+    backgroundColor: "#cccccc",
+  },
+  buttonText: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  signUpContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 30,
+  },
+  signUpText: {
+    fontSize: 16,
+    color: "#666666",
+  },
+  signUpLink: {
+    fontSize: 16,
+    color: "#007AFF",
+    fontWeight: "600",
   },
 });

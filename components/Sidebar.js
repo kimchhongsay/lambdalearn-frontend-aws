@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system";
-// import { signOut } from "firebase/auth"; // Removed - using AWS Cognito
+// Firebase signOut removed - using AWS Cognito
 import React, { useContext, useState } from "react";
 import {
   Alert,
@@ -11,27 +11,21 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-// import { auth } from "../firebaseConfig"; // Removed - using AWS Cognito
+// Firebase auth removed - using AWS Cognito
 import { MyContext } from "../hooks/MyContext";
 import { deleteAllUserData } from "../api/api";
 
-const Sidebar = ({ navigation, setUserInfo }) => {
+const Sidebar = ({ navigation, handleSignOut: onSignOut }) => {
   const [refreshing, setRefreshing] = useState(false);
   const { incrementRefreshKey, userEmail, setUserEmail } =
     useContext(MyContext);
 
   const handleSignOut = async () => {
     try {
-      // TODO: Replace with AWS Cognito signOut
-      // import DirectCognitoAuthService from '../services/DirectCognitoAuthService';
-      // await DirectCognitoAuthService.signOut();
-
-      await AsyncStorage.removeItem("@user");
-      setUserInfo(null);
+      await onSignOut();
       setUserEmail("");
       incrementRefreshKey();
       navigation.closeDrawer();
-      console.log("User signed out successfully");
     } catch (error) {
       console.error("Error signing out: ", error);
     }

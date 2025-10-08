@@ -15,7 +15,7 @@ import {
   View,
 } from "react-native";
 import RNHTMLtoPDF from "react-native-html-to-pdf";
-import HTML from "react-native-render-html";
+import { RenderHTML } from "react-native-render-html";
 import Share from "react-native-share";
 import DropdownPicker from "../components/assets/DropdownPicker";
 import {
@@ -647,9 +647,11 @@ const RecordedSummarizeData = ({ route, navigation }) => {
                           </TouchableOpacity>
                         </View>
                         <View style={styles.textContainer}>
-                          <HTML
+                          <RenderHTML
                             source={{ html: state.summarizedTexts[language] }}
                             contentWidth={windowWidth}
+                            defaultTextProps={{}}
+                            defaultWebViewProps={{}}
                           />
                         </View>
                       </View>

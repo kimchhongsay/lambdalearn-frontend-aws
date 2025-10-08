@@ -1,5 +1,6 @@
 import { MaterialIcons } from "@expo/vector-icons";
-// import { doc, getDoc, setDoc } from "firebase/firestore"; // Removed - using AWS DynamoDB
+import AsyncStorage from "@react-native-async-storage/async-storage";
+// Firestore removed - using AWS DynamoDB
 import React, { useContext, useEffect, useState } from "react";
 import {
   Image,
@@ -10,10 +11,11 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import DynamicBody from "../components/DynamicBody";
 import TabButton from "../components/TabButton";
-// import { db } from "../firebaseConfig"; // Removed - using AWS DynamoDB
+// Firebase db removed - using AWS DynamoDB
 import { MyContext } from "../hooks/MyContext";
 
 const Main = ({ navigation, route }) => {
@@ -30,25 +32,59 @@ const Main = ({ navigation, route }) => {
   const userInfo = route.params.userInfo;
 
   const [activeBottomTab, setActiveBottomTab] = useState("Recording");
+  const [displayUserInfo, setDisplayUserInfo] = useState(null);
 
   const topTabs = {
     Recording: ["Home", "Chat Room", "Summarize History"],
   };
 
+  // Generate user initials for avatar
+  const getUserInitials = (username, email) => {
+    if (username && username !== email) {
+      return username.substring(0, 2).toUpperCase();
+    }
+    if (email) {
+      return email.substring(0, 2).toUpperCase();
+    }
+    return "U";
+  };
+
+  // Handle image picker (placeholder for future implementation)
+  const pickImage = async () => {
+    Alert.alert(
+      "Profile Picture",
+      "Profile picture upload will be available in a future update. For now, we're showing your initials!",
+      [{ text: "OK" }]
+    );
+  };
+
   useEffect(() => {
-    const checkAndSaveUserEmail = async () => {
+    const initializeUserData = async () => {
       if (userInfo?.email) {
         try {
           setUserEmail(userInfo.email);
+
+          // Set display user info with proper username priority
+          const displayInfo = {
+            username:
+              userInfo.username || userInfo.email?.split("@")[0] || "User",
+            email: userInfo.email,
+            fullName:
+              userInfo.fullName ||
+              userInfo.displayName ||
+              userInfo.username ||
+              "User",
+          };
+          setDisplayUserInfo(displayInfo);
+
           // TODO: Replace with AWS DynamoDB user creation
           // const dynamoDBService = require('../services/DynamoDBServiceReal');
           // await dynamoDBService.createUser({
           //   userId: userInfo.email,
           //   email: userInfo.email,
-          //   name: userInfo.displayName,
-          //   photoURL: userInfo.photoURL
+          //   name: displayInfo.username,
+          //   photoURL: profileImage
           // });
-          console.log("User email set, AWS DynamoDB integration pending");
         } catch (error) {
           console.error("Error processing user data:", error);
         }
@@ -56,7 +92,7 @@ const Main = ({ navigation, route }) => {
       incrementRefreshKey();
     };
 
-    checkAndSaveUserEmail();
+    initializeUserData();
   }, [userInfo]);
 
   return (
@@ -64,16 +100,31 @@ const Main = ({ navigation, route }) => {
       <StatusBar barStyle="dark-content" backgroundColor="#f0f4f8" />
 
       <View style={styles.header}>
-        {userInfo?.photoURL && (
-          <Image
-            source={{ uri: userInfo.photoURL }}
-            style={styles.profileImage}
-          />
-        )}
+        <TouchableOpacity
+          onPress={pickImage}
+          style={styles.profileImageContainer}>
+          <View style={styles.initialsAvatar}>
+            <Text style={styles.initialsText}>
+              {getUserInitials(
+                displayUserInfo?.username,
+                displayUserInfo?.email
+              )}
+            </Text>
+          </View>
+          <View style={styles.cameraIcon}>
+            <MaterialIcons name="photo-camera" size={16} color="#fff" />
+          </View>
+        </TouchableOpacity>
+
         <View style={styles.userInfo}>
-          <Text style={styles.userName}>{userInfo?.displayName}</Text>
-          <Text style={styles.userEmail}>{userInfo?.email}</Text>
+          <Text style={styles.userName}>
+            {displayUserInfo?.username || "User"}
+          </Text>
+          <Text style={styles.userEmail}>
+            {displayUserInfo?.email || userInfo?.email}
+          </Text>
         </View>
+
         <TouchableOpacity
           style={styles.menuIcon}
           onPress={() => navigation.openDrawer()}>
@@ -122,10 +173,44 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  profileImage: {
+  profileImageContainer: {
+    position: "relative",
+  },
+  initialsAvatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
+    backgroundColor: "#007AFF",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  initialsText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  cameraIcon: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    backgroundColor: "#007AFF",
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   userInfo: {
     marginLeft: 16,

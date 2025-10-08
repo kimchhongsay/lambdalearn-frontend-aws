@@ -116,7 +116,7 @@ App.js
 
 ```javascript
 SERVER_URL =
-  "https://nsc.ubru.ac.th" /
+  "http://0.0.0.0:8000" /
   // Available Endpoints
   transcribe / // Audio → Text conversion
   /translate/ / // Text translation
@@ -246,7 +246,7 @@ AWS_COGNITO_USER_POOL_ID=ap-southeast-1_jIEVUYdDC
 AWS_COGNITO_CLIENT_ID=4jcsjes25i20c2bce35vtr3l12
 
 # Backend API
-API_BASE_URL=https://nsc.ubru.ac.th
+API_BASE_URL=http://0.0.0.0:8000
 
 # AWS Services (Ready for Backend)
 AWS_ACCESS_KEY_ID=env_var_ready

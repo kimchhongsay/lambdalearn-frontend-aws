@@ -90,8 +90,7 @@ const ChatRoom = () => {
   // Function to handle fetching chat room data
   const fetchChatRoomsData = useCallback(async () => {
     try {
-      const userDocRef = getUserDocRef(userEmail);
-      const chatRooms = await fetchChatRoom(userDocRef);
+      const chatRooms = await fetchChatRoom(userEmail);
 
       const formattedChatRooms = chatRooms.map((chatRoom) => ({
         ...chatRoom,

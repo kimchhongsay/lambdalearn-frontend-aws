@@ -1,35 +1,65 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 // Firebase imports removed - using AWS services
-// import {
-//   collection, deleteDoc, doc, getDoc, getDocs, query, setDoc,
-//   Timestamp, updateDoc, where, orderBy, onSnapshot, addDoc,
-//   writeBatch, collectionGroup,
-// } from "firebase/firestore";
-// import { db } from "../firebaseConfig";
 import { format } from "date-fns";
+
+// Import environment variables
+import { API_BASE_URL } from "@env";
 
 // Import AWS services
 // TODO: Uncomment when ready for full AWS integration
 // import DynamoDBService from '../services/DynamoDBServiceReal';
 
 // _____________________________________________________________________________
-// The following functions are used in the Transcript component in the snippet that use in RecordedSummarizeData.js
-const SERVER_URL = "https://nsc.ubru.ac.th";
-// const SERVER_URL = "https://093b-202-29-20-94.ngrok-free.app";
+// API Server Configuration
+// Use environment variable or fallback to platform-specific URLs
+import { Platform } from "react-native";
+
+const getDevServerUrl = () => {
+  if (Platform.OS === "android") {
+    return "http://10.0.2.2:8000"; // Android emulator
+  } else if (Platform.OS === "ios") {
+    return "http://localhost:8000"; // iOS simulator
+  }
+  return "http://localhost:8000"; // Web/default
+};
+
+const SERVER_URL =
+  API_BASE_URL ||
+  (__DEV__ ? getDevServerUrl() : "https://your-production-api.com");
+
 const encodedFilePath = (filePath) => {
   return filePath.replace(/\//g, "%2F");
 };
 
-// Removed Firebase getUserDocRef - using AWS DynamoDB
-const getUserDocRef = (userEmail) => {
-  // TODO: Replace with AWS DynamoDB user reference
-  console.log("getUserDocRef called for:", userEmail);
-  return null; // Placeholder - implement with DynamoDB
+// Network configuration helper
+const getServerUrl = () => {
+  return SERVER_URL;
+};
+
+// Test API connectivity
+const testAPIConnection = async () => {
+  try {
+    const response = await axios.get(SERVER_URL + "/health", {
+      timeout: 5000,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    return { success: true, status: response.status };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+const getUserId = (userEmail) => {
+  return userEmail;
 };
 
 const transcriptAudio = async (filePath) => {
   const api_route = "/transcribe/";
+  const serverUrl = getServerUrl();
+
   const formData = new FormData();
   formData.append("file", {
     uri: filePath,
@@ -38,7 +68,7 @@ const transcriptAudio = async (filePath) => {
   });
 
   try {
-    const response = await axios.post(SERVER_URL + api_route, formData, {
+    const response = await axios.post(serverUrl + api_route, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -46,23 +76,16 @@ const transcriptAudio = async (filePath) => {
       maxRedirects: 5,
     });
 
-    return response.data.transcript;
-  } catch (error) {
-    console.error("Error transcribing audio: ", error.message);
-    if (error.response) {
-      console.error("Status code:", error.response.status);
-      console.error("Response data:", error.response.data);
-    } else if (error.request) {
-      console.error("Request made but no response received:", error.request);
-    } else {
-      console.error("Error setting up request:", error.message);
+    if (response.data.success) {
+      return response.data.data.transcript;
     }
+    throw new Error(response.data.error || "Transcription failed");
+  } catch (error) {
     throw error;
   }
 };
 
 const purgeTranscript = async (transcript) => {
-  console.log("Transcript text: ", transcript);
   try {
     const response = await axios.post(
       SERVER_URL + "/purge/",
@@ -74,7 +97,10 @@ const purgeTranscript = async (transcript) => {
     );
 
     console.log("Purged Transcript: ", response.data.purged_transcript);
-    return response.data.purged_transcript;
+    if (response.data.success) {
+      return response.data.data.purged_text;
+    }
+    throw new Error(response.data.error || "Purge failed");
   } catch (error) {
     console.error("Error purging transcript: ", error);
     throw error;
@@ -82,7 +108,6 @@ const purgeTranscript = async (transcript) => {
 };
 
 const summarizeTranscript = async (purgedTranscript, language) => {
-  console.log("Summarize Transcript: ", purgedTranscript);
   try {
     const response = await axios.post(
       SERVER_URL + "/summarize/",
@@ -92,9 +117,11 @@ const summarizeTranscript = async (purgedTranscript, language) => {
       },
       { timeout: 3000000 } // 5 minutes
     );
-    return response.data.transcribe_summarize;
+    if (response.data.success) {
+      return response.data.data.transcribe_summarize;
+    }
+    throw new Error(response.data.error || "Summarization failed");
   } catch (error) {
-    console.log("Error summarizing transcript: ", error);
     throw error;
   }
 };
@@ -109,7 +136,10 @@ const translateText = async (text, target_language) => {
       },
       { timeout: 3000000 } // 5 minutes
     );
-    return response.data.translated_text;
+    if (response.data.success) {
+      return response.data.data.translated_text;
+    }
+    throw new Error(response.data.error || "Translation failed");
   } catch (error) {
     console.log("Error translating text: ", error);
     throw error;
@@ -128,7 +158,7 @@ const removeFromAsyncStorage = async (key) => {
   await AsyncStorage.removeItem(key);
 };
 
-const saveOrUpdateSummaryToFirestore = async (
+const saveOrUpdateSummaryToAWS = async (
   filePath,
   userEmail,
   language,
@@ -136,135 +166,100 @@ const saveOrUpdateSummaryToFirestore = async (
   subject
 ) => {
   try {
-    const summarizeId = encodedFilePath(filePath);
-    // console.log("File path: ", filePath);
-    const summaryId = filePath;
-    const userDocRef = getUserDocRef(userEmail);
-    const summaryRef = doc(userDocRef, "summaries", summarizeId);
-
-    // Data to be saved
     const summaryData = {
-      Subject: subject,
-      Language: language,
-      Text: summaryText,
-      Date: new Date(),
+      userId: getUserId(userEmail),
+      summarizeId: encodedFilePath(filePath),
+      subject,
+      language,
+      text: summaryText,
+      date: new Date().toISOString(),
     };
 
-    await setDoc(summaryRef, summaryData);
-    // console.log("Summary saved/updated successfully!");
+    await axios.post(`${SERVER_URL}/summaries`, summaryData);
   } catch (error) {
-    console.error("Error saving/updating summary: ", error);
     throw error;
   }
 };
 
-const deleteSummaryFromFirestore = async (userEmail, summarizeId) => {
+const deleteSummaryFromAWS = async (userEmail, summarizeId) => {
   try {
-    const userDocRef = getUserDocRef(userEmail); // Get user document ref
-    const summaryRef = doc(userDocRef, "summaries", summarizeId);
-    console.log("Summary summarizeId:", summarizeId);
-    await deleteDoc(summaryRef);
-    console.log("Summary deleted successfully!");
+    await axios.delete(
+      `${SERVER_URL}/summaries/${encodeURIComponent(
+        getUserId(userEmail)
+      )}/${summarizeId}`
+    );
   } catch (error) {
-    console.error("Error deleting summary: ", error);
-    throw error; // Re-throw for higher-level error handling
+    throw error;
+  }
+};
+
+const getSummaryFromFirestore = async (userEmail, summarizeId) => {
+  try {
+    const response = await axios.get(
+      `${SERVER_URL}/summaries/${encodeURIComponent(
+        getUserId(userEmail)
+      )}/${summarizeId}`
+    );
+    if (response.data.success) {
+      return response.data.data;
+    }
+    return null;
+  } catch (error) {
+    return null;
   }
 };
 
 // _____________________________________________________________________________
 // The following functions are used in the ChatRoom component in the snippet
 
-const getUserDocSnap = async (userDocRef) => {
-  return await getDoc(userDocRef);
+const getUserDocSnap = async (userEmail) => {
+  return { exists: () => true, data: () => ({ email: userEmail }) };
 };
 
-const fetchChatRoom = async (userDocRef) => {
-  const chatRoomsRef = collection(userDocRef, "chatrooms");
-
-  // Create a query to order by 'createdAt' in descending order
-  const q = query(chatRoomsRef, orderBy("createdAt", "desc"));
-
-  const chatRoomsSnapshot = await getDocs(q);
-
-  const chatRoomsData = chatRoomsSnapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
-
-  // Uncomment and adjust the following block to process or log the chat room data if needed
-  /*
-  chatRoomsData.forEach((chatRoom) => {
-    const createdAt = new Date(chatRoom.createdAt.seconds * 1000);
-    const SummarizeEndDate = new Date(chatRoom.endDate.seconds * 1000);
-    const SummarizeStartDate = new Date(chatRoom.startDate.seconds * 1000);
-
-    console.log("Chat Room ID:", chatRoom.chatRoomId);
-    console.log("Created At:", createdAt.toLocaleDateString()); // Format as date only
-    console.log("End Date:", SummarizeEndDate.toLocaleDateString()); // Format as date only
-    console.log("Language:", chatRoom.language);
-    console.log("Start Date:", SummarizeStartDate.toLocaleDateString()); // Format as date only
-    console.log("Subjects:", chatRoom.subjects.join(", "));
-    console.log("User Docs:", chatRoom.userDocs);
-  });
-  */
-
-  return chatRoomsData;
-};
-
-// Get distinct subjects from Firestore
-const getDistinctSubjectsFromFirestore = async (userEmail) => {
+const fetchChatRoom = async (userEmail) => {
   try {
-    const userDocRef = getUserDocRef(userEmail);
-    const summariesRef = collection(userDocRef, "summaries");
-
-    // Fetch all documents from the "summaries" collection
-    const querySnapshot = await getDocs(summariesRef);
-    const subjects = new Set();
-
-    // Extract distinct subjects
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.Subject) {
-        subjects.add(data.Subject);
-      }
-    });
-
-    // Convert Set to Array
-    return Array.from(subjects);
+    const response = await axios.get(
+      `${SERVER_URL}/chatrooms/${encodeURIComponent(getUserId(userEmail))}`
+    );
+    return response.data.data.chatrooms || [];
   } catch (error) {
-    console.error("Error fetching distinct subjects: ", error);
-    throw error;
+    return [];
   }
 };
 
-// Get distinct language from Firestore
-const getDistinctLanguageFromFirestore = async (userEmail) => {
+const getDistinctSubjectsFromAWS = async (userEmail) => {
   try {
-    const userDocRef = getUserDocRef(userEmail);
-    const summariesRef = collection(userDocRef, "summaries");
-
-    // Fetch all documents from the "summaries" collection
-    const querySnapshot = await getDocs(summariesRef);
-    const languages = new Set();
-
-    // Extract distinct languages
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.Subject) {
-        languages.add(data.Language);
-      }
-    });
-
-    // Convert Set to Array
-    return Array.from(languages);
+    const response = await axios.get(
+      `${SERVER_URL}/summaries/subjects/${encodeURIComponent(
+        getUserId(userEmail)
+      )}`
+    );
+    if (response.data.success) {
+      return response.data.data.subjects || [];
+    }
+    return [];
   } catch (error) {
-    console.error("Error fetching distinct subjects: ", error);
-    throw error;
+    return [];
   }
 };
 
-// Function to fetch summaries based on subject, language, startDate, and endDate
-const getSummariesFromFirestore = async (
+const getDistinctLanguageFromAWS = async (userEmail) => {
+  try {
+    const response = await axios.get(
+      `${SERVER_URL}/summaries/languages/${encodeURIComponent(
+        getUserId(userEmail)
+      )}`
+    );
+    if (response.data.success) {
+      return response.data.data.languages || [];
+    }
+    return [];
+  } catch (error) {
+    return [];
+  }
+};
+
+const getSummariesFromAWS = async (
   userEmail,
   subjects,
   language,
@@ -272,136 +267,89 @@ const getSummariesFromFirestore = async (
   endDate
 ) => {
   try {
-    const userDocRef = getUserDocRef(userEmail);
-    const summariesRef = collection(userDocRef, "summaries");
+    const params = {
+      userId: getUserId(userEmail),
+      subjects: subjects?.join(","),
+      language,
+      startDate,
+      endDate,
+    };
 
-    // Create a query with multiple conditions
-    let q = query(summariesRef);
+    const queryString = Object.entries(params)
+      .filter(([_, value]) => value)
+      .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+      .join("&");
 
-    if (subjects.length > 0) {
-      q = query(q, where("Subject", "in", subjects));
-    }
+    const response = await axios.get(`${SERVER_URL}/summaries?${queryString}`);
+    const summaries = response.data.success
+      ? response.data.data.summaries || []
+      : [];
 
-    if (language) {
-      q = query(q, where("Language", "==", language));
-    }
-
-    if (startDate && endDate) {
-      const startTimestamp = Timestamp.fromDate(new Date(startDate));
-      const endTimestamp = Timestamp.fromDate(new Date(endDate));
-
-      q = query(q, where("Date", ">=", startTimestamp));
-      q = query(q, where("Date", "<=", endTimestamp));
-    }
-
-    const querySnapshot = await getDocs(q);
-    const summaries = [];
-    querySnapshot.forEach((doc) => {
-      summaries.push({ id: doc.id, ...doc.data() });
-    });
-
-    // console.log("Summaries fetched successfully!");
-    // console.log("Summaries: ", summaries);
-
-    let formatSummarize = ""; // Change from const to let
+    let formatSummarize = "";
     if (Array.isArray(summaries) && summaries.length > 0) {
       formatSummarize = summaries
         .map(
           (item, index) =>
-            `Summary ${index + 1} (Subject: ${item.Subject}):\n` + // Add subject name here
+            `Summary ${index + 1} (Subject: ${item.Subject}):\n` +
             `  Text: ${item.Text}\n` +
-            `  Summarize Date: ${new Date(
-              item.Date.seconds * 1000
-            ).toLocaleString()}\n`
+            `  Summarize Date: ${new Date(item.Date).toLocaleString()}\n`
         )
         .join("\n");
-      console.log(formatSummarize);
-    } else {
-      console.log("No summaries available or summaries is not an array");
     }
 
     return formatSummarize;
   } catch (error) {
-    console.error("Error getting summaries: ", error);
-    throw error;
+    return "";
   }
 };
 
-// Function to create a chat room
 const createChatRoom = async (
   userEmail,
   selectedSubject,
   selectedLanguage,
   startDate,
-  endDate,
-  userDocs
+  endDate
 ) => {
   try {
-    const userDocRef = getUserDocRef(userEmail);
-    const chatRoomId = new Date().toISOString(); // Generate a unique ID for the chat room
+    const userDocs = await getSummariesFromAWS(
+      userEmail,
+      selectedSubject,
+      selectedLanguage,
+      startDate,
+      endDate
+    );
 
-    // Strip the time component by setting time to midnight
-    const startDateOnly = new Date(startDate);
-    startDateOnly.setHours(0, 0, 0, 0);
-    const endDateOnly = new Date(endDate);
-    endDateOnly.setHours(0, 0, 0, 0);
-
-    // Save chat room details into 'chatrooms' collection
-    const chatRoomRef = doc(userDocRef, "chatrooms", chatRoomId);
-    await setDoc(chatRoomRef, {
-      chatRoomId,
+    const chatRoomData = {
+      userId: getUserId(userEmail),
       subjects: selectedSubject,
       language: selectedLanguage,
-      startDate: Timestamp.fromDate(startDateOnly),
-      endDate: Timestamp.fromDate(endDateOnly),
-      createdAt: Timestamp.now(),
-    });
-
-    // Save summaries directly in the chat room document as a field
-    await updateDoc(chatRoomRef, {
-      userDocs: userDocs,
-    });
-
-    return {
-      chatRoomId,
-      userDocs: userDocs,
+      startDate,
+      endDate,
+      userDocs,
     };
+
+    const response = await axios.post(`${SERVER_URL}/chatrooms`, chatRoomData);
+    if (response.data.success) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || "Failed to create chatroom");
   } catch (error) {
-    console.error("Error creating chat room:", error);
     throw error;
   }
 };
 
-// Assuming this is the deleteChatRoom function
-const deleteCollection = async (collectionRef) => {
-  const querySnapshot = await getDocs(collectionRef);
-  const batch = writeBatch(db);
-
-  querySnapshot.forEach((doc) => {
-    batch.delete(doc.ref);
-  });
-
-  await batch.commit();
+const deleteCollection = async () => {
+  return true;
 };
 
 const deleteChatRoom = async (userEmail, chatRoomId) => {
   try {
-    const chatRoomRef = doc(db, "Users", userEmail, "chatrooms", chatRoomId);
-
-    // Delete all subcollections within the chat room
-    const subCollections = ["messages"]; // Add any other subcollections here
-
-    for (const subCollection of subCollections) {
-      const subCollectionRef = collection(chatRoomRef, subCollection);
-      await deleteCollection(subCollectionRef);
-    }
-
-    // Delete the chat room document
-    await deleteDoc(chatRoomRef);
-
-    console.log(`Chat room with ID '${chatRoomId}' deleted successfully!`);
+    await axios.delete(
+      `${SERVER_URL}/chatrooms/${encodeURIComponent(
+        getUserId(userEmail)
+      )}/${chatRoomId}`
+    );
   } catch (error) {
-    console.error("Error deleting chat room:", error);
     throw error;
   }
 };
@@ -413,194 +361,94 @@ const sendMessageToServer = async (userDocs, historyMessages, userMessage) => {
     { userDocs, historyMessages, userMessage },
     { headers: { "Content-Type": "application/json" } }
   );
-  return response.data.response;
+  if (response.data.success) {
+    return response.data.data.response;
+  }
+  throw new Error(response.data.error || "Chat response failed");
 };
 
-// Function to add a message to Firestore
 const addMessageToFirestore = async (userEmail, chatRoomId, message) => {
-  const chatRoomMessagesRef = collection(
-    db,
-    "Users",
-    userEmail,
-    "chatrooms",
-    chatRoomId,
-    "messages"
-  );
-  await addDoc(chatRoomMessagesRef, message);
-};
-
-// Function to set up a real-time listener
-const listenToMessages = (userEmail, chatRoomId, setMessages) => {
-  const messagesSubcollectionRef = collection(
-    db,
-    "Users",
-    userEmail,
-    "chatrooms",
-    chatRoomId,
-    "messages"
-  );
-
-  const messagesQuery = query(
-    messagesSubcollectionRef,
-    orderBy("timestamp", "asc")
-  );
-
-  return onSnapshot(messagesQuery, (snapshot) => {
-    const fetchedMessages = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-
-    const sortedMessagesWithDates = [];
-    let lastDate = null;
-
-    fetchedMessages.forEach((message) => {
-      if (message.timestamp) {
-        const messageDate = format(message.timestamp.toDate(), "dd MMM yyyy");
-
-        if (messageDate !== lastDate) {
-          sortedMessagesWithDates.push({
-            id: `date-${messageDate}`,
-            type: "date",
-            date: messageDate,
-          });
-          lastDate = messageDate;
-        }
-      }
-
-      sortedMessagesWithDates.push({
-        ...message,
-        type: "message",
-      });
-    });
-
-    setMessages(sortedMessagesWithDates);
-  });
-};
-
-// Function to fetch all messages of a user in a specific chat room
-const fetchMessages = async (userEmail, chatRoomId) => {
   try {
-    const messagesRef = collection(
-      db,
-      "Users",
-      userEmail,
-      "chatrooms",
+    const messageData = {
+      userId: getUserId(userEmail),
       chatRoomId,
-      "messages"
-    );
-    const q = query(messagesRef, orderBy("timestamp", "asc"));
-
-    const querySnapshot = await getDocs(q);
-    const messages = querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-
-    // Extract required fields: role, text, and timestamp
-    const formattedMessages = messages.map((message) => ({
-      role: message.role,
-      text: message.text,
-      // Check if timestamp exists before calling toDate()
-      timestamp: message.timestamp ? message.timestamp.toDate() : null,
-    }));
-
-    return formattedMessages;
+      ...message,
+    };
+    await axios.post(`${SERVER_URL}/messages`, messageData);
   } catch (error) {
-    console.error("Error fetching messages: ", error);
     throw error;
   }
 };
 
-// Function to fetch all the data of each chatroom data
+const listenToMessages = (userEmail, chatRoomId, setMessages) => {
+  const intervalId = setInterval(async () => {
+    try {
+      const messages = await fetchMessages(userEmail, chatRoomId);
+      setMessages(messages);
+    } catch (error) {
+      // Ignore errors in polling
+    }
+  }, 2000);
+
+  return () => clearInterval(intervalId);
+};
+
+const fetchMessages = async (userEmail, chatRoomId) => {
+  try {
+    const response = await axios.get(
+      `${SERVER_URL}/messages/${encodeURIComponent(
+        getUserId(userEmail)
+      )}/${chatRoomId}`
+    );
+    if (response.data.success) {
+      return response.data.data.messages || [];
+    }
+    return [];
+  } catch (error) {
+    return [];
+  }
+};
+
 const fetchEachChatroomData = async (userEmail, chatRoomId) => {
   try {
-    // Construct the document path dynamically
-    const chatRoomDocRef = doc(
-      db,
-      `Users/${userEmail}/chatrooms/${chatRoomId}`
+    const response = await axios.get(
+      `${SERVER_URL}/chatrooms/${encodeURIComponent(
+        getUserId(userEmail)
+      )}/${chatRoomId}`
     );
-    const chatRoomDocSnap = await getDoc(chatRoomDocRef);
-
-    if (chatRoomDocSnap.exists()) {
-      const eachChatRoomData = chatRoomDocSnap.data();
-      // console.log("Each Chat Room Data:", eachChatRoomData);
-      return eachChatRoomData;
-    } else {
-      console.log("Each Chat Room Data No such document!");
-      return null;
+    if (response.data.success) {
+      return response.data.data;
     }
+    return null;
   } catch (error) {
-    console.error("Error fetching chat room document:", error);
     return null;
   }
 };
 
 // _____________________________________________________________________________
-// Function for Summarize History
 const getAllSummariesFromFirestore = async (userEmail) => {
   try {
-    const userDocRef = getUserDocRef(userEmail);
-    const summariesRef = collection(userDocRef, "summaries");
-
-    const querySnapshot = await getDocs(summariesRef);
-    const summaries = [];
-    querySnapshot.forEach((doc) => {
-      summaries.push({ id: doc.id, ...doc.data() });
-    });
-
-    return summaries;
+    const response = await axios.get(
+      `${SERVER_URL}/summaries/${encodeURIComponent(getUserId(userEmail))}`
+    );
+    if (response.data.success) {
+      return response.data.data.summaries || [];
+    }
+    return [];
   } catch (error) {
-    console.error("Error getting summaries: ", error);
-    throw error;
+    return [];
   }
 };
 
 // ____________________________________________________________________________________________
-// Delete all data inside a user's document
 const deleteAllUserData = async (userEmail) => {
   try {
-    // 1. Delete Summaries
-    const summariesRef = collection(db, "Users", userEmail, "summaries");
-    await deleteCollectionDocuments(summariesRef);
-
-    // 2. Delete Chatrooms and their Messages
-    const chatroomsRef = collection(db, "Users", userEmail, "chatrooms");
-    const chatroomsSnapshot = await getDocs(chatroomsRef);
-
-    for (const chatroomDoc of chatroomsSnapshot.docs) {
-      // Delete messages subcollection within each chatroom
-      const messagesRef = collection(chatroomDoc.ref, "messages");
-      await deleteCollectionDocuments(messagesRef);
-
-      // Delete the chatroom document itself
-      await deleteDoc(chatroomDoc.ref);
-    }
-
-    // 3. Finally, delete the user document
-    const userDocRef = doc(db, "Users", userEmail);
-    await deleteDoc(userDocRef);
-
-    console.log(
-      `All data inside user document '${userEmail}' deleted successfully!`
+    await axios.delete(
+      `${SERVER_URL}/users/${encodeURIComponent(getUserId(userEmail))}`
     );
   } catch (error) {
-    console.error("Error deleting all data inside user document:", error);
     throw error;
   }
-};
-
-// Helper function to delete all documents within a collection
-// (You can keep this function as it is)
-const deleteCollectionDocuments = async (collectionRef) => {
-  const querySnapshot = await getDocs(collectionRef);
-  const batch = writeBatch(db);
-
-  querySnapshot.forEach((doc) => {
-    batch.delete(doc.ref);
-  });
-
-  await batch.commit();
 };
 
 // Export functions - Firebase functions marked for AWS DynamoDB migration
@@ -611,6 +459,7 @@ export {
   summarizeTranscript,
   sendMessageToServer,
   encodedFilePath,
+  testAPIConnection, // For debugging network connectivity
 
   // AsyncStorage functions (keeping)
   saveToAsyncStorage,
@@ -618,21 +467,22 @@ export {
   removeFromAsyncStorage,
   purgeTranscript,
 
-  // Firebase functions - TODO: Replace with AWS DynamoDB equivalents
-  createChatRoom, // -> DynamoDB createChatroom
-  deleteSummaryFromFirestore, // -> DynamoDB deleteSummary
-  deleteAllUserData, // -> DynamoDB clearUserData
-  fetchChatRoom, // -> DynamoDB getChatrooms
-  getAllSummariesFromFirestore, // -> DynamoDB getAllSummaries
-  getDistinctLanguageFromFirestore, // -> DynamoDB getDistinctLanguages
-  getDistinctSubjectsFromFirestore, // -> DynamoDB getDistinctSubjects
-  getSummariesFromFirestore, // -> DynamoDB getSummaries
-  getUserDocRef, // -> DynamoDB getUserRef
-  getUserDocSnap, // -> DynamoDB getUser
-  saveOrUpdateSummaryToFirestore, // -> DynamoDB createSummary
-  addMessageToFirestore, // -> DynamoDB createMessage
-  listenToMessages, // -> DynamoDB queryMessages
-  fetchMessages, // -> DynamoDB getMessages
-  fetchEachChatroomData, // -> DynamoDB getChatroomData
-  deleteChatRoom, // -> DynamoDB deleteChatroom
+  // AWS DynamoDB functions
+  createChatRoom,
+  deleteSummaryFromAWS as deleteSummaryFromFirestore,
+  deleteAllUserData,
+  fetchChatRoom,
+  getAllSummariesFromFirestore,
+  getDistinctLanguageFromAWS as getDistinctLanguageFromFirestore,
+  getDistinctSubjectsFromAWS as getDistinctSubjectsFromFirestore,
+  getSummariesFromAWS as getSummariesFromFirestore,
+  getSummaryFromFirestore,
+  getUserId as getUserDocRef,
+  getUserDocSnap,
+  saveOrUpdateSummaryToAWS as saveOrUpdateSummaryToFirestore,
+  addMessageToFirestore,
+  listenToMessages,
+  fetchMessages,
+  fetchEachChatroomData,
+  deleteChatRoom,
 };

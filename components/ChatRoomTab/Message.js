@@ -1,4 +1,4 @@
-// import { Timestamp } from "firebase/firestore"; // Removed - using Date objects
+// Firebase Timestamp removed - using Date objects
 import React from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import Markdown from "react-native-markdown-display";

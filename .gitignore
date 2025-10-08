@@ -10,6 +10,11 @@
 *.env.production
 .env*
 
+eas.json
+app.json
+babel.config.js
+
+
 # AWS Credentials & Config
 aws-exports*.js
 *aws-exports*
@@ -124,6 +129,8 @@ chrome-user-data/
 *~
 .#*
 #*#
+
+\app.json
 
 # Backup files
 *.bak

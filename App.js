@@ -1,18 +1,17 @@
 import * as React from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View, Text } from "react-native";
 import SignIn from "./screens/SignIn";
-import * as Google from "expo-auth-session/providers/google";
-import * as WebBrowser from "expo-web-browser";
-// Firebase auth removed - keeping Google provider for compatibility
-import {
-  GoogleAuthProvider,
-  // onAuthStateChanged,    // Removed - using AWS Cognito
-  // signInWithCredential,  // Removed - using AWS Cognito
-} from "firebase/auth";
-// Firebase imports removed - using AWS services
-// import { auth } from "./firebaseConfig";
-// import { getFirestore, doc, setDoc } from "firebase/firestore";
+import SignUp from "./screens/SignUp";
+import CognitoTest from "./screens/CognitoTest";
+import CognitoDebugger from "./components/CognitoDebugger";
+// AWS Cognito authentication
+import { Amplify } from "aws-amplify";
+import { signOut } from "aws-amplify/auth";
+import awsconfig from "./aws-exports-env";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import DirectCognitoAuthService from "./services/DirectCognitoAuthService";
+
+console.log("App.js: Starting to load components...");
 import RecordedSummarizeData from "./screens/RecordedSummarizeData";
 import SummaryDetail from "./screens/SummaryDetail";
 import ChatRoom from "./screens/ChatRoom";
@@ -36,9 +35,63 @@ import MyProvider from "./hooks/MyContext";
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
-// const firestore = getFirestore(); // Removed - using AWS DynamoDB
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
 
-WebBrowser.maybeCompleteAuthSession();
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 20,
+          }}>
+          <Text style={{ fontSize: 18, color: "red", textAlign: "center" }}>
+            Something went wrong!
+          </Text>
+          <Text
+            style={{
+              fontSize: 14,
+              color: "gray",
+              textAlign: "center",
+              marginTop: 10,
+            }}>
+            {this.state.error?.message || "Unknown error"}
+          </Text>
+        </View>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Configure AWS Amplify
+try {
+  console.log("App.js: Configuring AWS Amplify...");
+  console.log("App.js: Amplify config:", JSON.stringify(awsconfig, null, 2));
+  Amplify.configure(awsconfig);
+  console.log("App.js: AWS Amplify configured successfully");
+
+  // Test Cognito connection
+  console.log("App.js: Testing Cognito configuration...");
+} catch (error) {
+  console.error("App.js: Error configuring Amplify:", error);
+}
 
 function MainStack({ userInfo }) {
   // Pass userInfo to MainStack
@@ -71,76 +124,71 @@ function MainStack({ userInfo }) {
   );
 }
 
-export default function App() {
+function App() {
   const [userInfo, setUserInfo] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId:
-      "185963385145-o5k6dek5colpf07hkepr23pvnkm10vfu.apps.googleusercontent.com",
-    webClientId:
-      "185963385145-or5p5ssmd5brp1e6377ms8dcilmhrn6n.apps.googleusercontent.com",
-  });
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [refreshTrigger, setRefreshTrigger] = React.useState(0);
 
-  const checkLocalUser = async () => {
+  const checkAuthState = async () => {
     try {
       setLoading(true);
-      const userJSON = await AsyncStorage.getItem("@user");
-      const userData = userJSON ? JSON.parse(userJSON) : null;
-      setUserInfo(userData);
+      console.log("🔍 Checking authentication state with DirectCognito...");
+
+      const result = await DirectCognitoAuthService.getCurrentUser();
+
+      if (result.success && result.user) {
+        const user = result.user;
+        console.log("👤 DirectCognito user found:", user.email);
+
+        const userInfo = {
+          email: user.email,
+          username: user.username,
+          uid: user.email, // Using email as uid for now
+          displayName: user.email,
+          accessToken: user.accessToken,
+          idToken: user.idToken,
+        };
+
+        console.log("✅ User authenticated via DirectCognito:", userInfo.email);
+        setUserInfo(userInfo);
+        setIsAuthenticated(true);
+        await AsyncStorage.setItem("@user", JSON.stringify(userInfo));
+      } else {
+        console.log("❌ No DirectCognito user found");
+        setIsAuthenticated(false);
+        setUserInfo(null);
+        await AsyncStorage.removeItem("@user");
+      }
     } catch (error) {
-      alert(error.message);
+      // User is not authenticated
+      console.log("❌ Authentication check failed:", error.message);
+      setIsAuthenticated(false);
+      setUserInfo(null);
+      await AsyncStorage.removeItem("@user");
     } finally {
       setLoading(false);
     }
   };
 
-  const storeUserData = async (user) => {
+  const handleSignOut = async () => {
     try {
-      await AsyncStorage.setItem("@user", JSON.stringify(user));
-      setUserInfo(user);
-      // TODO: Save to AWS DynamoDB using DynamoDBServiceReal
-      console.log("User stored locally, AWS DynamoDB integration pending");
+      console.log("👋 Signing out via DirectCognito...");
+      await DirectCognitoAuthService.signOut();
+      setUserInfo(null);
+      setIsAuthenticated(false);
+      await AsyncStorage.removeItem("@user");
+      console.log("✅ Sign out successful");
     } catch (error) {
-      console.error("Error storing user data:", error);
+      console.error("❌ Error signing out:", error);
     }
   };
 
   React.useEffect(() => {
-    checkLocalUser();
+    checkAuthState();
   }, []);
 
-  React.useEffect(() => {
-    if (response?.type === "success") {
-      const { id_token } = response.params;
-      // Firebase auth removed - using Google token directly
-      // const credential = GoogleAuthProvider.credential(id_token);
-      // signInWithCredential(auth, credential).then((result) => {
-      //   if (result.user) {
-      //     storeUserData(result.user);
-      //   }
-      // });
-
-      // TODO: Integrate with AWS Cognito for Google sign-in
-      console.log("Google sign-in success, AWS integration pending");
-    }
-  }, [response]);
-
-  // Firebase auth state removed - using AWS Cognito
-  // React.useEffect(() => {
-  //   const unsub = onAuthStateChanged(auth, async (user) => {
-  //     if (user) {
-  //       setUserInfo(user);
-  //       await AsyncStorage.setItem("@user", JSON.stringify(user));
-  //     } else {
-  //       setUserInfo(null);
-  //     }
-  //   });
-  //   return () => unsub();
-  // }, []);
-
   const clearData = () => {
-    console.log("Clearing data...");
     setRefreshTrigger((prev) => prev + 1);
   };
 
@@ -160,7 +208,7 @@ export default function App() {
               drawerContent={(props) => (
                 <Sidebar
                   {...props}
-                  setUserInfo={setUserInfo}
+                  handleSignOut={handleSignOut}
                   clearData={clearData}
                 />
               )}>
@@ -177,12 +225,42 @@ export default function App() {
           </MyProvider>
         </ToastProvider>
       ) : (
-        <Stack.Navigator>
+        <Stack.Navigator initialRouteName="SignIn">
           <Stack.Screen name="SignIn" options={{ headerShown: false }}>
-            {(props) => <SignIn {...props} promptAsync={promptAsync} />}
+            {(props) => <SignIn {...props} onSignIn={checkAuthState} />}
+          </Stack.Screen>
+          <Stack.Screen name="SignUp" options={{ headerShown: false }}>
+            {(props) => <SignUp {...props} onSignUpComplete={checkAuthState} />}
+          </Stack.Screen>
+          <Stack.Screen name="CognitoTest" options={{ headerShown: false }}>
+            {(props) => <CognitoTest {...props} />}
+          </Stack.Screen>
+          <Stack.Screen
+            name="CognitoDebugger"
+            options={{ title: "Cognito Debug" }}>
+            {(props) => (
+              <CognitoDebugger
+                {...props}
+                onUserAuthenticated={(user) => {
+                  console.log("User authenticated from debugger:", user);
+                  checkAuthState();
+                }}
+              />
+            )}
           </Stack.Screen>
         </Stack.Navigator>
       )}
     </NavigationContainer>
   );
 }
+
+// Wrap the main app with error boundary
+function WrappedApp() {
+  return (
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  );
+}
+
+export default WrappedApp;
